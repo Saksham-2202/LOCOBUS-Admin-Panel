@@ -9,7 +9,7 @@
 <body>
   <div class="layout">
     <aside class="sidebar">
-      <div class="brand">LOC🅱️BUS</div>
+      <div class="brand">LOC🅱BUS</div>
       <nav class="menu">
   <a class="menu-item active" href="../index/index.html">Dashboard</a>
   <a class="menu-item" href="../live-map/live-map.html">Live Map</a>
@@ -19,43 +19,52 @@
   <a class="menu-item" href="../help desk/helpDesk.html">Help Desk</a>
   <a class="menu-item" href="../settings/settings.html">Settings</a>
 
-</nav>
+      </nav>
 
-      <!-- UPDATED: Admin image added -->
       <div class="admin-profile">
         <img src="admin img.png" class="admin-icon" />
-        <a class="menu-item" href="../login/login.html">Log in</a>
+        <span id="adminName">ADMIN_33</span>
       </div>
     </aside>
 
     <main class="main">
       <header class="topbar">
         <h2>Dashboard</h2>
-     
         <img src="search_icon.png" class="search-img" /> 
         <input type="text" class="search" placeholder="Search your destination" />
-        <a class="menu-item" href="../login/login.html">Log in</a>
+        <a class="menu-item logout-btn" href="#" id="logoutBtn">Logout</a>
       </header>
       
       <section class="stats-row">
+        <!-- Active Fleet Box with Real-time Data -->
         <div class="stat-box">
           <h3>Active Fleet</h3>
-          <p class="value">52 <span>/60</span></p>
+          <p class="value">
+            <span id="activeBusCount">--</span> 
+            <span>/</span>
+            <span id="totalBusCount">--</span>
+          </p>
           <p class="label">Buses Running</p>
+          <div class="update-indicator" id="fleetUpdateIndicator">
+            <span class="pulse"></span> Live
+          </div>
         </div>
+
         <div class="stat-box">
           <h3>On-Time Buses</h3>
-          <p class="value">95%</p>
+          <p class="value"><span id="onTimeBuses">95%</span></p>
           <p class="label">On Time</p>
         </div>
+
         <div class="stat-box highlight">
           <h3>New Complaints</h3>
-          <p class="value">14</p>
+          <p class="value"><span id="complaintsCount">14</span></p>
           <p class="label">Unresolved Complaints</p>
         </div>
+
         <div class="stat-box">
           <h3>SOS</h3>
-          <p class="value">0</p>
+          <p class="value"><span id="sosCount">0</span></p>
           <p class="label">Active Emergencies</p>
         </div>
       </section>
@@ -108,7 +117,6 @@
         <div class="tourist-list">
           <h4>Trending Tourist Spot</h4>
 
-          <!-- UPDATED: Images added for each tourist spot -->
           <div class="spot">
             Golden Temple, Amritsar <span>#1</span>
             <img src="golden temple.jpeg" class="spot-img" />
@@ -123,12 +131,12 @@
             Moga, Punjab <span>#3</span>
             <img src="moga.jpeg" class="spot-img" />
           </div>
-
         </div>
       </section>
     </main>
   </div>
 
-  <script src="script.js"></script>
+  <!-- Firebase SDKs -->
+  <script type="module" src="script.js"></script>
 </body>
 </html>

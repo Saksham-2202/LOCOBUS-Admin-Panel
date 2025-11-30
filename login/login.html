@@ -5,16 +5,12 @@
   <meta name="viewport" content="width=device-width,initial-scale=1" />
   <title>Bus Sathi | Admin Login</title>
   <link rel="stylesheet" href="./login.css" />
-  <!-- Firebase v9 CDN (modular) -->
-  <script type="module" src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
-  <script type="module" src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
-  <script type="module" src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
 </head>
 <body>
   <div class="login-layout">
     <aside class="login-side">
       <div class="brand">
-        <div class="brand-text">LOC🅱️BUS</div>
+        <div class="brand-text">LOC🅱BUS</div>
       </div>
       <p class="lead">Admin Panel</p>
       <p class="sub">Sign in to manage fleet, broadcasts, help desk and more.</p>
@@ -25,8 +21,8 @@
         <h2>Admin Sign In</h2>
 
         <div class="form-row">
-          <label>Email</label>
-          <input id="email" type="email" class="input" placeholder="admin@example.com" />
+          <label>Admin ID</label>
+          <input id="adminId" type="text" class="input" placeholder="admin1" />
         </div>
 
         <div class="form-row">
@@ -41,7 +37,7 @@
           <a href="../index/index.html" class="btn-ghost">Back</a>
         </div>
 
-        <div class="hint">Use your admin credentials. For demo mode this page uses client-side Firebase auth.</div>
+        <div class="hint">Use your admin credentials provided by the administrator.</div>
       </div>
     </main>
   </div>

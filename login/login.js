@@ -1,98 +1,142 @@
-// login.js - Firebase Auth + Firestore (demo)
-// IMPORTANT: Replace the firebaseConfig object with your project's config
-// You can also put config in a separate file and import it here.
+// login.js - Firestore Admin Verification (No Firebase Auth)
 
 import { initializeApp } from "https://www.gstatic.com/firebasejs/9.23.0/firebase-app.js";
-import { getAuth, signInWithEmailAndPassword, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/9.23.0/firebase-auth.js";
-import { getFirestore, doc, getDoc } from "https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore.js";
+import { getFirestore, collection, query, where, getDocs } from "https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore.js";
 
 document.addEventListener('DOMContentLoaded', () => {
-  // --- FIREBASE CONFIG: replace these placeholders with your actual config ---
+  // Firebase Configuration
   const firebaseConfig = {
-    apiKey: "YOUR_API_KEY",
-    authDomain: "YOUR_PROJECT.firebaseapp.com",
-    projectId: "hospital-project-54ebd",
-    // ... other fields (storageBucket, messagingSenderId, appId)
+    apiKey: "AIzaSyCRtx7Oyda48Hz0eu-BiNrGYiK3_36Vl-c",
+    authDomain: "locobus-e4274.firebaseapp.com",
+    databaseURL: "https://locobus-e4274-default-rtdb.asia-southeast1.firebasedatabase.app",
+    projectId: "locobus-e4274",
+    storageBucket: "locobus-e4274.firebasestorage.app",
+    messagingSenderId: "296482389648",
+    appId: "1:296482389648:web:1827bd92dc55c8a857e215"
   };
-  // -------------------------------------------------------------------------
 
-  // init
+  // Initialize Firebase
   const app = initializeApp(firebaseConfig);
-  const auth = getAuth(app);
   const db = getFirestore(app);
 
-  // elements
-  const emailEl = document.getElementById('email');
+  // Get DOM elements
+  const adminIdEl = document.getElementById('adminId');
   const passEl = document.getElementById('password');
   const loginBtn = document.getElementById('loginBtn');
   const errMsg = document.getElementById('errMsg');
 
+  // Helper functions for error messages
   function showError(msg) {
     errMsg.textContent = msg;
     errMsg.style.color = '#ef4444';
   }
+
+  function showSuccess(msg) {
+    errMsg.textContent = msg;
+    errMsg.style.color = '#10b981';
+  }
+
   function clearError() {
     errMsg.textContent = '';
   }
 
-  // On login set: sign in and fetch admin profile from Firestore
+  // Check if already logged in
+  const loggedInAdmin = sessionStorage.getItem('adminProfile');
+  if (loggedInAdmin) {
+    window.location.href = "../index/index.html";
+  }
+
+  // Login button click handler
   loginBtn.addEventListener('click', async () => {
+    await handleLogin();
+  });
+
+  // Allow Enter key to submit
+  passEl.addEventListener('keypress', async (e) => {
+    if (e.key === 'Enter') {
+      await handleLogin();
+    }
+  });
+
+  adminIdEl.addEventListener('keypress', async (e) => {
+    if (e.key === 'Enter') {
+      await handleLogin();
+    }
+  });
+
+  // Main login function
+  async function handleLogin() {
     clearError();
-    const email = emailEl.value.trim();
+    const adminId = adminIdEl.value.trim();
     const password = passEl.value;
 
-    if (!email || !password) {
-      showError('Please enter email and password.');
+    // Validation
+    if (!adminId || !password) {
+      showError('Please enter Admin ID and Password.');
       return;
     }
 
+    // Disable button during login
     loginBtn.disabled = true;
     loginBtn.textContent = 'Signing in...';
 
     try {
-      const cred = await signInWithEmailAndPassword(auth, email, password);
-      // get admin user id
-      const uid = cred.user.uid;
+      // Query Firestore for matching adminId
+      const adminsRef = collection(db, 'admins');
+      const q = query(adminsRef, where('adminId', '==', adminId));
+      const querySnapshot = await getDocs(q);
 
-      // fetch admin profile document (assumes collection "admins" with doc id = uid)
-      const adminRef = doc(db, 'admins', uid);
-      const adminSnap = await getDoc(adminRef);
-
-      if (!adminSnap.exists()) {
-        // if no admin doc found, sign out and show error
-        showError('No admin profile found. Contact developer.');
-        await auth.signOut();
+      // Check if admin exists
+      if (querySnapshot.empty) {
+        showError('Invalid Admin ID or Password.');
         loginBtn.disabled = false;
         loginBtn.textContent = 'Sign in';
         return;
       }
 
-      const adminData = adminSnap.data();
-      // store some admin info locally (session)
+      // Get the first matching document
+      let adminFound = false;
+      let adminData = null;
+      let docId = null;
+
+      querySnapshot.forEach((doc) => {
+        const data = doc.data();
+        
+        // Compare password (plain text for now)
+        if (data.password === password) {
+          adminFound = true;
+          adminData = data;
+          docId = doc.id;
+        }
+      });
+
+      if (!adminFound) {
+        showError('Invalid Admin ID or Password.');
+        loginBtn.disabled = false;
+        loginBtn.textContent = 'Sign in';
+        return;
+      }
+
+      // Login successful
+      showSuccess('Login successful! Redirecting...');
+
+      // Store admin info in session
       sessionStorage.setItem('adminProfile', JSON.stringify({
-        uid,
-        name: adminData.name || adminData.displayName || 'Admin',
-        email: adminData.email || email
+        docId: docId,
+        adminId: adminData.adminId,
+        loginTime: new Date().toISOString()
       }));
 
-      // redirect to dashboard (update path if needed)
-      window.location.href = "../dashBoard/dashBoard.html";
+      // Redirect to dashboard after short delay
+      setTimeout(() => {
+        window.location.href = "../index/index.html";
+      }, 1000);
+
     } catch (err) {
-      console.error(err);
-      showError(err.message || 'Login failed');
+      console.error('Login error:', err);
+      showError('Login failed. Please try again.');
       loginBtn.disabled = false;
       loginBtn.textContent = 'Sign in';
     }
-  });
-
-  // If already signed in, redirect automatically (optional)
-  onAuthStateChanged(auth, user => {
-    if (user) {
-      // optionally validate Firestore admin doc quickly then redirect
-      // window.location.href = "../dashBoard/dashBoard.html";
-    }
-  }, err => {
-    console.warn('Auth state error', err);
-  });
-
+  }
 });

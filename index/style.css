@@ -28,7 +28,11 @@ body {
   border-radius: 12px;
 }
 
-.brand { font-weight:700; font-size:20px; margin-bottom:6px; }
+.brand { 
+  font-weight: 700; 
+  font-size: 20px; 
+  margin-bottom: 6px; 
+}
 
 .menu {
   display: flex;
@@ -44,12 +48,22 @@ body {
   font-size: 16px;
   text-decoration: none;
   color: #333;
+  transition: all 0.2s ease;
 }
 
-.menu-item.active,
+.menu-item.active {
+  background: #0b58d0;
+  color: #fff;
+}
+
 .menu-item:hover {
   background: #e6ecff;
   color: #0033cc;
+}
+
+.menu-item.active:hover {
+  background: #0b58d0;
+  color: #fff;
 }
 
 .admin-profile {
@@ -59,6 +73,19 @@ body {
   border-radius: 6px;
   text-align: center;
   font-size: 14px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+}
+
+/* Admin image icon */
+.admin-icon {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  object-fit: cover;
+  background-color: #ffffff;
 }
 
 /* Main Area */
@@ -74,6 +101,7 @@ body {
   justify-content: space-between;
   align-items: center;
   margin-bottom: 20px;
+  position: relative;
 }
 
 .topbar h2 {
@@ -82,22 +110,36 @@ body {
 }
 
 .search {
-  padding: 10px 15px;
+  padding: 10px 15px 10px 40px;
   width: 250px;
   border: 1px solid #ccc;
   border-radius: 20px;
-  position: relative;
-  margin-right: -57rem;
+  position: absolute;
+  left: 50%;
+  transform: translateX(-50%);
 }
-.search-img{
+
+.search-img {
   width: 20px;
   height: 20px;
-  border-radius: 8px;
-  vertical-align: middle;
   position: absolute;
-  opacity: 1.2;
-  margin-top: 10pxpx;
-  margin-left: 64rem;
+  left: 50%;
+  transform: translateX(-110px);
+  margin-top: 10px;
+  opacity: 0.6;
+}
+
+.logout-btn {
+  background: #ef4444;
+  color: white !important;
+  padding: 8px 16px;
+  border-radius: 8px;
+  font-size: 14px;
+}
+
+.logout-btn:hover {
+  background: #dc2626 !important;
+  color: white !important;
 }
 
 /* Stats Row */
@@ -113,17 +155,30 @@ body {
   border-radius: 10px;
   flex: 1;
   box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+  position: relative;
+  transition: transform 0.2s ease;
+}
+
+.stat-box:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 8px rgba(0,0,0,0.15);
 }
 
 .stat-box h3 {
   font-size: 15px;
   margin-bottom: 8px;
+  color: #374151;
 }
 
 .stat-box .value {
   font-size: 28px;
   font-weight: bold;
   margin-bottom: 5px;
+  color: #111827;
+}
+
+.stat-box .value span {
+  color: #6b7280;
 }
 
 .stat-box .label {
@@ -134,6 +189,57 @@ body {
 .stat-box.highlight {
   background: #0033cc;
   color: white;
+}
+
+.stat-box.highlight h3,
+.stat-box.highlight .value,
+.stat-box.highlight .label {
+  color: white;
+}
+
+/* Live Update Indicator */
+.update-indicator {
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 11px;
+  color: #10b981;
+  font-weight: 600;
+}
+
+.pulse {
+  width: 8px;
+  height: 8px;
+  background: #10b981;
+  border-radius: 50%;
+  animation: pulse 2s infinite;
+}
+
+@keyframes pulse {
+  0%, 100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 0.5;
+    transform: scale(1.2);
+  }
+}
+
+.update-indicator.flash {
+  animation: flash 0.5s ease;
+}
+
+@keyframes flash {
+  0%, 100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.3;
+  }
 }
 
 /* Panels */
@@ -168,6 +274,12 @@ body {
   color: #0033cc;
   border-radius: 5px;
   cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.panel-header button:hover {
+  background: #0033cc;
+  color: white;
 }
 
 .list .item {
@@ -185,34 +297,67 @@ body {
   border-radius: 5px;
   cursor: pointer;
   float: right;
+  transition: all 0.2s ease;
+}
+
+.item button:hover {
+  background: #0056b3;
 }
 
 .list.empty {
   height: 120px;
   background: #f7f7f7;
   border-radius: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #9ca3af;
+  font-size: 14px;
+}
+
+.list.empty::after {
+  content: "No critical alerts";
 }
 
 /* Tourism Section */
-.tourist-panel .spot {
-  background: #e6ecff;
-  padding: 10px;
-  margin-top: 10px;
-  border-radius: 8px;
-  font-weight: 500;
-}
-/* Admin image icon */
-.admin-icon {
-  width: 32px;
-  height: 32px;
-  border-radius: 50%;
-  object-fit: cover;
-  margin-right: 8px;
-  vertical-align: middle;
-  background-color: #ffffff;
+.tourist-panel {
+  background: white;
+  padding: 15px;
+  border-radius: 10px;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.1);
 }
 
-.menu-item.active { background:#0b58d0; color:#fff; }
+.tourist-list h4 {
+  margin-bottom: 12px;
+  color: #374151;
+}
+
+.spot {
+  background: #e6ecff;
+  padding: 12px;
+  margin-bottom: 10px;
+  border-radius: 8px;
+  font-weight: 500;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  transition: all 0.2s ease;
+}
+
+.spot:hover {
+  background: #dbeafe;
+  transform: translateX(4px);
+}
+
+.spot span {
+  margin-left: auto;
+  background: #0033cc;
+  color: white;
+  padding: 4px 8px;
+  border-radius: 4px;
+  font-size: 12px;
+  font-weight: 700;
+}
 
 /* Tourist spot images */
 .spot-img {
@@ -220,13 +365,24 @@ body {
   height: 40px;
   border-radius: 8px;
   object-fit: cover;
-  margin-right: 10px;
-  vertical-align: middle;
+  order: -1;
 }
 
-/* Align spot items properly */
-.spot {
-  display: flex;
-  align-items: center;
-  gap: 10px;
+/* Responsive Design */
+@media (max-width: 768px) {
+  .stats-row {
+    flex-wrap: wrap;
+  }
+  
+  .stat-box {
+    flex: 1 1 calc(50% - 10px);
+  }
+  
+  .panel-row {
+    flex-direction: column;
+  }
+  
+  .search {
+    width: 180px;
+  }
 }
