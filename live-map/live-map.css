@@ -66,7 +66,6 @@
     .menu-item {
       display:block; padding:10px 12px; border-radius:8px; color:#111827; text-decoration:none; font-weight:600; transition: all .12s ease;
     }
-
     /* Controls */
     .controls { display:flex; gap:8px; }
     .btn { background:var(--accent); color:white; border:0; padding:8px 10px; border-radius:8px; cursor:pointer; font-weight:700; }
