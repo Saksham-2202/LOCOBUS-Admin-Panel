@@ -1,8 +1,8 @@
-// createBus.js - Admin Creates Firebase Auth Account + Firestore Document
+// createbus.js - Bulk Bus Management System with Persistence
 
 import { initializeApp } from "https://www.gstatic.com/firebasejs/9.23.0/firebase-app.js";
 import { getAuth, createUserWithEmailAndPassword } from "https://www.gstatic.com/firebasejs/9.23.0/firebase-auth.js";
-import { getFirestore, doc, setDoc, getDoc } from "https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore.js";
+import { getFirestore, doc, setDoc, getDoc, collection, getDocs } from "https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore.js";
 
 // Firebase Configuration
 const firebaseConfig = {
@@ -20,29 +20,39 @@ const app = initializeApp(firebaseConfig);
 const auth = getAuth(app);
 const db = getFirestore(app);
 
+// Global Variables
+let busRows = [];
+let rowCounter = 0;
+let currentPasswordRowId = null;
+let adminProfile = null;
+
 // DOM Elements
-const form = document.getElementById('createBusForm');
-const messageBox = document.getElementById('messageBox');
-const submitBtn = document.getElementById('submitBtn');
-const btnText = document.getElementById('btnText');
-const btnLoader = document.getElementById('btnLoader');
-const previewCard = document.getElementById('previewCard');
+const busTableBody = document.getElementById('busTableBody');
+const addRowBtn = document.getElementById('addRowBtn');
+const saveAllBtn = document.getElementById('saveAllBtn');
+const emptyState = document.getElementById('emptyState');
+const adminPasswordModal = document.getElementById('adminPasswordModal');
+const adminPasswordInput = document.getElementById('adminPasswordInput');
+const successModal = document.getElementById('successModal');
+const totalCount = document.getElementById('totalCount');
+const pendingCount = document.getElementById('pendingCount');
 const adminNameEl = document.getElementById('adminName');
+const modalError = document.getElementById('modalError');
 
 // Check Admin Authentication
 function checkAuth() {
-  const adminProfile = sessionStorage.getItem('adminProfile');
-  if (!adminProfile) {
+  const profile = sessionStorage.getItem('adminProfile');
+  if (!profile) {
     window.location.href = "../login/login.html";
     return null;
   }
   
   try {
-    const profile = JSON.parse(adminProfile);
-    if (adminNameEl && profile.adminId) {
-      adminNameEl.textContent = profile.adminId.toUpperCase();
+    adminProfile = JSON.parse(profile);
+    if (adminNameEl && adminProfile.adminId) {
+      adminNameEl.textContent = adminProfile.adminId.toUpperCase();
     }
-    return profile;
+    return adminProfile;
   } catch (err) {
     console.error('Error parsing admin profile:', err);
     window.location.href = "../login/login.html";
@@ -50,155 +60,367 @@ function checkAuth() {
   }
 }
 
-// Show message
-function showMessage(message, type = 'error') {
-  messageBox.textContent = message;
-  messageBox.className = `message-box ${type}`;
-  messageBox.style.display = 'block';
-  
-  if (type === 'success') {
-    setTimeout(() => {
-      messageBox.style.display = 'none';
-    }, 5000);
+// Generate random 8-character password
+function generatePassword() {
+  const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZabcdefghjkmnpqrstuvwxyz23456789!@#$%';
+  let password = '';
+  for (let i = 0; i < 8; i++) {
+    password += chars.charAt(Math.floor(Math.random() * chars.length));
   }
+  return password;
 }
 
-// Hide message
-function hideMessage() {
-  messageBox.style.display = 'none';
-}
-
-// Loading state
-function setLoading(loading) {
-  submitBtn.disabled = loading;
-  if (loading) {
-    btnText.style.display = 'none';
-    btnLoader.style.display = 'inline-block';
-  } else {
-    btnText.style.display = 'inline';
-    btnLoader.style.display = 'none';
-  }
-}
-
-// Form submission
-form.addEventListener('submit', async (e) => {
-  e.preventDefault();
-  hideMessage();
-  
-  // Get form values
-  const busId = document.getElementById('busId').value.trim().toUpperCase();
-  const password = document.getElementById('password').value;
-  const confirmPassword = document.getElementById('confirmPassword').value;
-  
-  // Validation
-  if (!busId || !password || !confirmPassword) {
-    showMessage('Please fill in all required fields.', 'error');
-    return;
-  }
-  
-  if (password !== confirmPassword) {
-    showMessage('Passwords do not match!', 'error');
-    return;
-  }
-  
-  if (password.length < 6) {
-    showMessage('Password must be at least 6 characters long.', 'error');
-    return;
-  }
-  
-  setLoading(true);
-  
+// Load existing buses from Firestore
+async function loadExistingBuses() {
   try {
-    // Step 1: Check if bus ID already exists
-    const busRef = doc(db, 'buses', busId);
-    const busSnap = await getDoc(busRef);
+    const busesSnapshot = await getDocs(collection(db, 'buses'));
     
-    if (busSnap.exists()) {
-      showMessage(`Bus ID "${busId}" already exists! Please use a different ID.`, 'error');
-      setLoading(false);
-      return;
-    }
-    
-    // Step 2: Generate email from Bus ID
-    const email = `${busId.toLowerCase()}@locobus.com`;
-    
-    // Step 3: Create Firebase Authentication account
-    let conductorUid = null;
-    try {
-      const userCredential = await createUserWithEmailAndPassword(auth, email, password);
-      conductorUid = userCredential.user.uid;
-      console.log('Firebase Auth account created with UID:', conductorUid);
+    busesSnapshot.forEach((docSnap) => {
+      const busData = docSnap.data();
+      rowCounter++;
       
-      // Sign out the newly created account immediately (so admin stays logged in)
-      await auth.signOut();
-    } catch (authError) {
-      if (authError.code === 'auth/email-already-in-use') {
-        showMessage('This Bus ID is already registered. Please use a different ID.', 'error');
-      } else {
-        showMessage(`Authentication error: ${authError.message}`, 'error');
-      }
-      setLoading(false);
-      return;
-    }
+      console.log('Loading bus:', busData.busId, 'Password:', busData.busPassword); // Debug log
+      
+      const row = {
+        id: rowCounter,
+        busId: busData.busId || docSnap.id,
+        password: '********', // Display placeholder
+        actualPassword: busData.busPassword || '********', // Store actual password from Firestore
+        isPasswordVisible: false,
+        isSaved: true, // Mark as already saved
+        createdAt: busData.createdAt,
+        conductorUid: busData.conductorUid
+      };
+      
+      busRows.push(row);
+    });
     
-    // Step 4: Create Firestore document with conductorUid
-    const busData = {
-      busId: busId,
-      loginEmail: email,
-      conductorUid: conductorUid, // ✅ THIS IS THE KEY!
-      isProfileComplete: false,
-      createdAt: new Date().toISOString(),
-      createdBy: adminNameEl.textContent || 'Admin'
-    };
+    // Sort by creation date (newest first)
+    busRows.sort((a, b) => {
+      const dateA = a.createdAt ? new Date(a.createdAt) : new Date(0);
+      const dateB = b.createdAt ? new Date(b.createdAt) : new Date(0);
+      return dateB - dateA;
+    });
     
-    await setDoc(busRef, busData);
-    console.log('Bus document created with conductorUid');
+    console.log('Loaded buses:', busRows); // Debug log
     
-    // Show success message
-    showMessage('Bus credentials created successfully!', 'success');
-    
-    // Display preview card
-    document.getElementById('previewBusId').textContent = busId;
-    document.getElementById('previewPassword').textContent = password;
-    
-    // Add generated email to preview
-    const emailPreview = document.createElement('div');
-    emailPreview.className = 'credential-box';
-    emailPreview.innerHTML = `
-      <p class="label">Generated Email (for Firebase Auth):</p>
-      <p class="value" style="font-size: 14px;">${email}</p>
-    `;
-    document.querySelector('.preview-content').insertBefore(
-      emailPreview, 
-      document.querySelector('.preview-content .warning')
-    );
-    
-    // Hide form, show preview
-    document.querySelector('.form-card').style.display = 'none';
-    previewCard.style.display = 'block';
-    
-    setLoading(false);
+    renderTable();
+    updateStats();
     
   } catch (error) {
-    console.error('Error creating bus credentials:', error);
-    showMessage(`Error: ${error.message}`, 'error');
-    setLoading(false);
+    console.error('Error loading buses:', error);
   }
-});
+}
 
-// Password match validation
-document.getElementById('confirmPassword').addEventListener('input', function() {
-  const password = document.getElementById('password').value;
-  const confirmPassword = this.value;
+// Add new row
+function addRow() {
+  rowCounter++;
+  const row = {
+    id: rowCounter,
+    busId: '',
+    password: generatePassword(),
+    isPasswordVisible: false,
+    isSaved: false
+  };
   
-  if (confirmPassword && password !== confirmPassword) {
-    this.setCustomValidity('Passwords do not match');
-  } else {
-    this.setCustomValidity('');
+  busRows.push(row);
+  renderTable();
+  updateStats();
+}
+
+// Remove row
+function removeRow(id) {
+  busRows = busRows.filter(row => row.id !== id);
+  renderTable();
+  updateStats();
+}
+
+// Edit bus ID
+function editBusId(id, value) {
+  const row = busRows.find(r => r.id === id);
+  if (row) {
+    row.busId = value.trim().toUpperCase();
+    updateStats();
+  }
+}
+
+// Edit password
+function editPassword(id, value) {
+  const row = busRows.find(r => r.id === id);
+  if (row) {
+    row.password = value;
+  }
+}
+
+// Generate new password for a row
+function generateNewPassword(id) {
+  const row = busRows.find(r => r.id === id);
+  if (row) {
+    row.password = generatePassword();
+    renderTable();
+  }
+}
+
+// Show password with admin verification
+function showPassword(id) {
+  currentPasswordRowId = id;
+  adminPasswordModal.style.display = 'flex';
+  adminPasswordInput.value = '';
+  modalError.textContent = '';
+  adminPasswordInput.focus();
+}
+
+// Close admin modal
+window.closeAdminModal = function() {
+  adminPasswordModal.style.display = 'none';
+  currentPasswordRowId = null;
+};
+
+// Verify admin password
+window.verifyAdminPassword = async function() {
+  const enteredPassword = adminPasswordInput.value;
+  
+  if (!enteredPassword) {
+    modalError.textContent = 'Please enter admin password';
+    return;
+  }
+  
+  try {
+    // Query admin collection to verify password
+    const adminDoc = await getDoc(doc(db, 'admins', adminProfile.docId));
+    
+    if (!adminDoc.exists()) {
+      modalError.textContent = 'Admin account not found';
+      return;
+    }
+    
+    const adminData = adminDoc.data();
+    if (adminData.password !== enteredPassword) {
+      modalError.textContent = 'Incorrect admin password';
+      return;
+    }
+    
+    // Password correct - show the bus password
+    const row = busRows.find(r => r.id === currentPasswordRowId);
+    if (row) {
+      row.isPasswordVisible = true;
+      // If it's a saved bus with actualPassword, display that
+      // If it's a new unsaved bus, display the generated password
+      renderTable();
+    }
+    
+    closeAdminModal();
+    
+  } catch (error) {
+    console.error('Error verifying admin password:', error);
+    modalError.textContent = 'Verification failed. Please try again.';
+  }
+};
+
+// Hide password
+function hidePassword(id) {
+  const row = busRows.find(r => r.id === id);
+  if (row) {
+    row.isPasswordVisible = false;
+    renderTable();
+  }
+}
+
+// Render table
+function renderTable() {
+  if (busRows.length === 0) {
+    busTableBody.innerHTML = '';
+    emptyState.style.display = 'flex';
+    return;
+  }
+  
+  emptyState.style.display = 'none';
+  
+  busTableBody.innerHTML = busRows.map((row, index) => `
+    <tr class="${row.isSaved ? 'saved-row' : ''}">
+      <td>${index + 1}</td>
+      <td>
+        <input 
+          type="text" 
+          class="table-input ${!row.busId ? 'error' : ''}" 
+          placeholder="e.g., PB088" 
+          value="${row.busId}"
+          onInput="editBusId(${row.id}, this.value)"
+          ${row.isSaved ? 'disabled' : ''}
+        />
+      </td>
+      <td>
+        <div class="password-cell">
+          <input 
+            type="${row.isPasswordVisible ? 'text' : 'password'}" 
+            class="table-input password-input" 
+            value="${row.isPasswordVisible ? (row.actualPassword || row.password) : row.password}"
+            onInput="editPassword(${row.id}, this.value)"
+            ${row.isSaved ? 'disabled' : ''}
+          />
+          ${row.isSaved ? '' : `
+            <div class="password-actions">
+              <button class="icon-btn" onclick="generateNewPassword(${row.id})" title="Generate New">
+                🔄
+              </button>
+            </div>
+          `}
+        </div>
+      </td>
+      <td>
+        <div style="display: flex; align-items: center; gap: 8px;">
+          ${row.isPasswordVisible ? `
+            <button class="icon-btn" onclick="hidePassword(${row.id})" title="Hide Password">
+              👁️ Hide
+            </button>
+          ` : `
+            <button class="icon-btn" onclick="showPassword(${row.id})" title="Show Password">
+              👁️‍🗨️ Show
+            </button>
+          `}
+          ${row.isSaved ? `
+            <span class="status-badge saved">✓ Saved</span>
+          ` : `
+            <button class="btn-danger-sm" onclick="removeRow(${row.id})">
+              🗑️ Remove
+            </button>
+          `}
+        </div>
+      </td>
+      <td>
+        ${row.isSaved ? 
+          '<span class="status-dot success"></span>' : 
+          '<span class="status-dot pending"></span>'
+        }
+      </td>
+    </tr>
+  `).join('');
+  
+  // Re-attach functions to window for onclick
+  window.editBusId = editBusId;
+  window.editPassword = editPassword;
+  window.generateNewPassword = generateNewPassword;
+  window.showPassword = showPassword;
+  window.hidePassword = hidePassword;
+  window.removeRow = removeRow;
+}
+
+// Update stats
+function updateStats() {
+  totalCount.textContent = busRows.length;
+  const pending = busRows.filter(r => !r.isSaved).length;
+  pendingCount.textContent = pending;
+}
+
+// Save all buses
+async function saveAll() {
+  const unsavedRows = busRows.filter(r => !r.isSaved);
+  
+  if (unsavedRows.length === 0) {
+    alert('No new buses to save!');
+    return;
+  }
+  
+  // Validate all rows
+  const invalidRows = unsavedRows.filter(r => !r.busId || r.busId.length < 2);
+  if (invalidRows.length > 0) {
+    alert('Please fill in all Bus IDs before saving!');
+    return;
+  }
+  
+  saveAllBtn.disabled = true;
+  saveAllBtn.innerHTML = '⏳ Saving...';
+  
+  let successCount = 0;
+  let errorCount = 0;
+  const errors = [];
+  
+  for (const row of unsavedRows) {
+    try {
+      const busId = row.busId;
+      const password = row.password;
+      
+      // Check if bus already exists
+      const busRef = doc(db, 'buses', busId);
+      const busSnap = await getDoc(busRef);
+      
+      if (busSnap.exists()) {
+        errors.push(`${busId}: Already exists`);
+        errorCount++;
+        continue;
+      }
+      
+      // Generate email
+      const email = `${busId.toLowerCase()}@locobus.com`;
+      
+      // Create Firebase Auth account
+      const userCredential = await createUserWithEmailAndPassword(auth, email, password);
+      const conductorUid = userCredential.user.uid;
+      
+      // Sign out immediately
+      await auth.signOut();
+      
+      // Create Firestore document
+      await setDoc(busRef, {
+        busId: busId,
+        loginEmail: email,
+        conductorUid: conductorUid,
+        busPassword: password, // Store password in Firestore so we can view it later
+        isProfileComplete: false,
+        createdAt: new Date().toISOString(),
+        createdBy: adminProfile.adminId || 'Admin'
+      });
+      
+      // Mark as saved and store actual password for viewing
+      row.isSaved = true;
+      row.actualPassword = password; // Keep the actual password for viewing
+      row.password = '********'; // Replace display with placeholder
+      row.isPasswordVisible = false;
+      successCount++;
+      
+    } catch (error) {
+      console.error(`Error creating bus ${row.busId}:`, error);
+      errors.push(`${row.busId}: ${error.message}`);
+      errorCount++;
+    }
+  }
+  
+  // Show results
+  let message = `✅ Successfully created ${successCount} bus(es)`;
+  if (errorCount > 0) {
+    message += `\n❌ Failed: ${errorCount} bus(es)\n\n${errors.join('\n')}`;
+  }
+  
+  document.getElementById('successMessage').textContent = message;
+  successModal.style.display = 'flex';
+  
+  renderTable();
+  updateStats();
+  
+  saveAllBtn.disabled = false;
+  saveAllBtn.innerHTML = '💾 Save All';
+}
+
+// Close success modal
+window.closeSuccessModal = function() {
+  successModal.style.display = 'none';
+};
+
+// Event Listeners
+addRowBtn.addEventListener('click', addRow);
+saveAllBtn.addEventListener('click', saveAll);
+
+// Allow Enter key in admin password modal
+adminPasswordInput.addEventListener('keypress', (e) => {
+  if (e.key === 'Enter') {
+    verifyAdminPassword();
   }
 });
 
 // Initialize
-document.addEventListener('DOMContentLoaded', () => {
-  checkAuth();
+document.addEventListener('DOMContentLoaded', async () => {
+  if (checkAuth()) {
+    // Load existing buses first
+    await loadExistingBuses();
+  }
 });

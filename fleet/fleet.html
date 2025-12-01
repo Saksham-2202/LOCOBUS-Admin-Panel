@@ -4,8 +4,6 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
   <title>Bus Sathi | Fleet Manager</title>
-
-  <!-- local CSS in same folder -->
   <link rel="stylesheet" href="./fleet.css" />
 </head>
 <body>
@@ -14,24 +12,21 @@
    <aside class="sidebar">
       <div class="brand">LOC🅱️BUS</div>
       <nav class="menu">
-  <a class="menu-item" href="../index/index.html">Dashboard</a>
-  <a class="menu-item" href="../live-map/live-map.html">Live Map</a>
-  <a class="menu-item active" href="../fleet/fleet.html">Fleet Management</a>
-  <a class="menu-item" href="../broadCasts/broadCasts.html">Broadcasts</a>
-  <a class="menu-item" href="../notifications/notifications.html">Notifications</a>
-  <a class="menu-item" href="../help desk/helpDesk.html">Help Desk</a>
-  <a class="menu-item" href="../settings/settings.html">Settings</a>
+        <a class="menu-item" href="../index/index.html">Dashboard</a>
+        <a class="menu-item" href="../live-map/live-map.html">Live Map</a>
+        <a class="menu-item active" href="../fleet/fleet.html">Fleet Management</a>
+        <a class="menu-item" href="../broadCasts/broadCasts.html">Broadcasts</a>
+        <a class="menu-item" href="../notifications/notifications.html">Notifications</a>
+        <a class="menu-item" href="../help desk/helpDesk.html">Help Desk</a>
+        <a class="menu-item" href="../settings/settings.html">Settings</a>
+      </nav>
 
-</nav>
-
-      <!-- UPDATED: Admin image added -->
       <div class="admin-profile">
-        <img src="admin img.png" class="admin-icon" />
+        <img src="admin img.png" class="admin-icon" alt="Admin" />
         ADMIN_33
       </div>
     </aside>
 
-    <!-- Main -->
     <main class="main">
       <header class="topbar">
         <h2>Fleet Manager</h2>
@@ -39,49 +34,24 @@
       </header>
 
       <section class="content">
-        <!-- Table area -->
         <div class="table-wrap">
           <div class="table-header">
             <div class="col col-number">Bus Number</div>
-            <div class="col col-routes"># Routes</div>
-            <div class="col col-conductor">Conductor ID</div>
-            <div class="col col-hours">Working Hours</div>
+            <div class="col col-routes">Route Status</div>
+            <div class="col col-conductor">Driver/Staff</div>
+            <div class="col col-hours">Status</div>
             <div class="col col-actions">Details</div>
           </div>
 
-          <!-- TABLE BODY -->
           <div id="fleet-rows" class="table-body">
-            <!-- example rows; note data-* attributes used by JS -->
-            <div class="row" data-conductor-name="Daksh Wadhwa" data-conductor-phone="8872735981" data-driver-name="Rahul" data-driver-phone="8872735981">
-              <div class="col col-number">PB 07 AB 8945</div>
-              <div class="col col-routes">2</div>
-              <div class="col col-conductor">ANHM......</div>
-              <div class="col col-hours">9</div>
-              <!-- IMPORTANT: use a button (not <a>) so JS handles it without navigating -->
-              <div class="col col-actions">
-                <button class="btn-view" data-bus="PB 07 AB 8945">View</button>
-              </div>
-            </div>
-
-            <div class="row" data-conductor-name="Rohit Verma" data-conductor-phone="8872700000" data-driver-name="Aman" data-driver-phone="8872700001">
-              <div class="col col-number">PB 17 CA XXXX</div>
-              <div class="col col-routes">6</div>
-              <div class="col col-conductor">ROVM......</div>
-              <div class="col col-hours">8.5</div>
-              <div class="col col-actions">
-                <button class="btn-view" data-bus="PB 17 CA XXXX">View</button>
-              </div>
-            </div>
-
-            <!-- add more rows in same format -->
+            <div class="row" style="justify-content: center; padding: 20px;">Loading data...</div>
           </div>
 
           <div class="table-footer">
-            Rows per page 8 &nbsp; &nbsp; 1-8 of 200
+            Rows per page 8 &nbsp; &nbsp; (Auto-loaded from Firebase)
           </div>
         </div>
 
-        <!-- Approval panel on the right -->
         <aside class="approval-panel">
           <div class="approval-header"><h3>Approval Request</h3></div>
 
@@ -111,45 +81,39 @@
       </section>
 
       <div class="image-note">
-        <img src="../assets/images/bus1.jpg" alt="sample" class="small-thumb" />
-        Fleet preview image (replace with project images in production)
+        <div style="width:80px; height:48px; background:#ddd; border-radius:6px;"></div>
+        Fleet preview image
       </div>
     </main>
   </div>
 
-  <!-- Hover card (keeps background unchanged). It's appended once per page. -->
   <div id="busHoverCard" class="hover-card" aria-hidden="true" role="dialog">
     <button id="hoverClose" class="hover-close" aria-label="Close">✕</button>
 
     <div class="hover-header">
       <h4 id="hcBusNumber">Bus Details</h4>
-      <div class="hc-meta" id="hcConductor">Conductor: —</div>
+      <div class="hc-meta" id="hcConductor">Staff: —</div>
     </div>
 
     <div class="hover-body">
       <div class="hc-left">
         <div class="hc-pill"><strong>Bus No</strong><div id="hcBusNo">—</div></div>
-        <div class="hc-pill"><strong>Routes</strong><div id="hcRoutes">—</div></div>
+        <div class="hc-pill"><strong>Status</strong><div id="hcStatus">—</div></div>
 
         <div class="route-mini">
-          <strong id="r1Title">Jalandhar ⇄ Kapurthala</strong>
-          <ul id="r1Stops"><li>Jalandhar Chowk</li></ul>
+          <strong id="r1Title">Route Information</strong>
+          <ul id="r1Stops"><li>Loading...</li></ul>
         </div>
       </div>
 
       <div class="hc-right">
         <div class="staff-mini">
-          <strong>Conductor</strong>
+          <strong>Staff Details</strong>
           <div id="hcConName">—</div>
           <div id="hcConPhone" class="small">—</div>
         </div>
-
-        <div class="staff-mini">
-          <strong>Driver</strong>
-          <div id="hcDrvName">—</div>
-          <div id="hcDrvPhone" class="small">—</div>
+        
         </div>
-      </div>
     </div>
 
     <div class="hover-footer">
@@ -157,9 +121,6 @@
       <button id="hcReject" class="btn-reject">Reject</button>
     </div>
   </div>
-  <!-- end hover card -->
-
-  <!-- local JS in same folder -->
-  <script src="./fleet.js"></script>
+  <script type="module" src="./fleet.js"></script>
 </body>
 </html>

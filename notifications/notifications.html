@@ -8,33 +8,29 @@
 </head>
 <body>
   <div class="layout">
-    <!-- Sidebar (same white theme) -->
     <aside class="sidebar">
       <div class="brand">LOC🅱️BUS</div>
       <nav class="menu">
-  <a class="menu-item" href="../index/index.html">Dashboard</a>
-  <a class="menu-item" href="../live-map/live-map.html">Live Map</a>
-  <a class="menu-item" href="../fleet/fleet.html">Fleet Management</a>
-  <a class="menu-item" href="../broadCasts/broadCasts.html">Broadcasts</a>
-  <a class="menu-item active" href="../notifications/notifications.html">Notifications</a>
-  <a class="menu-item" href="../help desk/helpDesk.html">Help Desk</a>
-  <a class="menu-item" href="../settings/settings.html">Settings</a>
+        <a class="menu-item" href="../index/index.html">Dashboard</a>
+        <a class="menu-item" href="../live-map/live-map.html">Live Map</a>
+        <a class="menu-item" href="../fleet/fleet.html">Fleet Management</a>
+        <a class="menu-item" href="../broadCasts/broadCasts.html">Broadcasts</a>
+        <a class="menu-item active" href="../notifications/notifications.html">Notifications</a>
+        <a class="menu-item" href="../help desk/helpDesk.html">Help Desk</a>
+        <a class="menu-item" href="../settings/settings.html">Settings</a>
+      </nav>
 
-</nav>
-
-      <!-- UPDATED: Admin image added -->
       <div class="admin-profile">
         <img src="admin img.png" class="admin-icon" />
         ADMIN_33
       </div>
     </aside>
 
-    <!-- Main -->
     <main class="main">
       <header class="main-header">
         <div>
           <h1>Send Custom Notifications</h1>
-          <p class="muted">Create and schedule notifications for your users and staff</p>
+          <p class="muted">Send alerts to all active Conductors/Buses</p>
         </div>
         <div class="header-actions">
           <input class="global-search" placeholder="Search notifications..." />
@@ -42,7 +38,6 @@
       </header>
 
       <div class="grid">
-        <!-- left: create notification -->
         <section class="card create-card">
           <h3>Create Notification</h3>
 
@@ -53,13 +48,9 @@
           <textarea id="ntMessage" class="textarea" placeholder="Write your notification message here..."></textarea>
           <div class="small muted rightcount" id="charCount">0/500</div>
 
-          <label class="label">Target Audience *</label>
-          <select id="ntAudience" class="input">
-            <option>All Users</option>
-            <option>Drivers</option>
-            <option>Conductors</option>
-            <option>Route: Jalandhar</option>
-          </select>
+          <div style="margin-top: 15px; font-size: 13px; color: #0b58d0; background: #eef2ff; padding: 10px; border-radius: 6px;">
+            <strong>Note:</strong> This notification will be sent to <strong>All Active Conductors</strong>.
+          </div>
 
           <label class="label">Schedule Send Time (Optional)</label>
           <input id="ntSchedule" type="datetime-local" class="input" />
@@ -70,65 +61,43 @@
           </div>
         </section>
 
-        <!-- right: recent notifications -->
         <aside class="card recent-card">
           <h3>Recent Notifications</h3>
           <div id="recentList" class="recent-list">
-            <!-- sample item -->
-            <div class="recent-item">
-              <div>
-                <div class="r-title">Service Disruption Alert</div>
-                <div class="r-meta">Specific Route • 11/20/2024 10:30 AM</div>
-              </div>
-              <div class="r-badges">
-                <span class="pill sent">Sent</span>
-                <a class="view-detail">View Details</a>
-              </div>
-            </div>
-            <div class="recent-item">
-              <div>
-                <div class="r-title">Weekend Schedule Changes</div>
-                <div class="r-meta">All Users • 11/25/2024 08:00 AM</div>
-              </div>
-              <div class="r-badges">
-                <span class="pill scheduled">Scheduled</span>
-                <a class="view-detail">View Details</a>
-              </div>
-            </div>
+            <div style="padding:20px; text-align:center; color:#999;">Loading notifications...</div>
           </div>
         </aside>
       </div>
     </main>
   </div>
 
-  <script src="./notifications.js"></script>
-  <!-- Notification Details Modal -->
-<div id="notifModalOverlay" class="notif-overlay" aria-hidden="true">
-  <div class="notif-modal" role="dialog" aria-labelledby="notifTitle">
-    <header class="nm-header">
-      <h3 id="notifTitle">Notification Details</h3>
-      <button id="notifClose" class="nm-close" aria-label="Close">✕</button>
-    </header>
+  <div id="notifModalOverlay" class="notif-overlay" aria-hidden="true">
+    <div class="notif-modal" role="dialog" aria-labelledby="notifTitle">
+      <header class="nm-header">
+        <h3 id="notifTitle">Notification Details</h3>
+        <button id="notifClose" class="nm-close" aria-label="Close">✕</button>
+      </header>
 
-    <div class="nm-body">
-      <div class="nm-row"><div class="nm-label">Title</div><div id="nmTitle" class="nm-value"></div></div>
-      <div class="nm-row"><div class="nm-label">Message</div><div id="nmMessage" class="nm-value"></div></div>
+      <div class="nm-body">
+        <div class="nm-row"><div class="nm-label">Title</div><div id="nmTitle" class="nm-value"></div></div>
+        <div class="nm-row"><div class="nm-label">Message</div><div id="nmMessage" class="nm-value"></div></div>
 
-      <div class="nm-flex">
-        <div class="nm-col">
-          <div class="nm-label">Audience</div>
-          <div id="nmAudience" class="nm-value"></div>
+        <div class="nm-flex">
+          <div class="nm-col">
+            <div class="nm-label">Target Audience</div>
+            <div id="nmAudience" class="nm-value">All Conductors</div>
+          </div>
+          <div class="nm-col">
+            <div class="nm-label">Status</div>
+            <div id="nmStatus" class="nm-value"></div>
+          </div>
         </div>
-        <div class="nm-col">
-          <div class="nm-label">Status</div>
-          <div id="nmStatus" class="nm-value"></div>
-        </div>
+
+        <div class="nm-row"><div class="nm-label">Sent Date & Time</div><div id="nmDate" class="nm-value"></div></div>
       </div>
-
-      <div class="nm-row"><div class="nm-label">Sent Date & Time</div><div id="nmDate" class="nm-value"></div></div>
     </div>
   </div>
-</div>
 
+  <script type="module" src="./notifications.js"></script>
 </body>
 </html>
