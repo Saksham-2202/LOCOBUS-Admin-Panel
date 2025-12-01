@@ -1,0 +1,127 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Create Bus Credentials | Admin</title>
+  <link rel="stylesheet" href="createBus.css" />
+</head>
+<body>
+  <div class="layout">
+    <aside class="sidebar">
+      <div class="brand">LOC🅱️BUS</div>
+      <nav class="menu">
+        <a class="menu-item" href="../dashBoard/dashBoard.html">Dashboard</a>
+        <a class="menu-item" href="../live-map/live-map.html">Live Map</a>
+        <a class="menu-item active" href="../fleet/fleet.html">Fleet Management</a>
+        <a class="menu-item" href="../broadCasts/broadCasts.html">Broadcasts</a>
+        <a class="menu-item" href="../notifications/notifications.html">Notifications</a>
+        <a class="menu-item" href="../help desk/helpDesk.html">Help Desk</a>
+        <a class="menu-item" href="../settings/settings.html">Settings</a>
+      </nav>
+
+      <div class="admin-profile">
+        <img src="../dashBoard/admin img.png" class="admin-icon" />
+        <span id="adminName">ADMIN</span>
+      </div>
+    </aside>
+
+    <main class="main">
+      <header class="topbar">
+        <h2>Create Bus Login Credentials</h2>
+        <a class="btn-back" href="../fleet/fleet.html">← Back to Fleet</a>
+      </header>
+
+      <div class="form-container">
+        <div class="form-card">
+          <div class="card-header">
+            <div class="icon-wrapper">
+              <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M5 17H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v10a2 2 0 0 1-2 2h-1"/>
+                <polygon points="12 15 17 21 7 21 12 15"/>
+              </svg>
+            </div>
+            <h3>Create Bus Account</h3>
+            <p>Create login credentials for conductor to access the app</p>
+          </div>
+
+          <form id="createBusForm">
+            <div class="form-section">
+              <h4>🚌 Create Bus Login Credentials</h4>
+              <p class="info-text">Create only Bus ID and Password. Conductor will complete their profile in the app after first login.</p>
+              
+              <div class="form-group">
+                <label for="busId">Bus ID (Login ID) *</label>
+                <input 
+                  type="text" 
+                  id="busId" 
+                  placeholder="e.g., PB088 or PB02EH2672"
+                  required
+                />
+                <span class="hint">This will be the conductor's login username</span>
+              </div>
+
+              <div class="form-group">
+                <label for="password">Password *</label>
+                <input 
+                  type="password" 
+                  id="password" 
+                  placeholder="Create a secure password"
+                  required
+                  minlength="6"
+                />
+                <span class="hint">Minimum 6 characters - share this with conductor</span>
+              </div>
+
+              <div class="form-group">
+                <label for="confirmPassword">Confirm Password *</label>
+                <input 
+                  type="password" 
+                  id="confirmPassword" 
+                  placeholder="Re-enter password"
+                  required
+                  minlength="6"
+                />
+              </div>
+            </div>
+
+            <div class="note-box">
+              <strong>📝 Note:</strong> After creating credentials, the conductor will complete their profile (name, phone, driver info, routes) in the app on first login.
+            </div>
+
+            <div class="message-box" id="messageBox"></div>
+
+            <div class="form-actions">
+              <button type="button" class="btn-secondary" onclick="window.history.back()">Cancel</button>
+              <button type="submit" class="btn-primary" id="submitBtn">
+                <span id="btnText">Create Bus Account</span>
+                <span id="btnLoader" class="loader" style="display: none;"></span>
+              </button>
+            </div>
+          </form>
+        </div>
+
+        <!-- Success Preview Card -->
+        <div class="preview-card" id="previewCard" style="display: none;">
+          <h4>✅ Bus Credentials Created!</h4>
+          <div class="preview-content">
+            <div class="credential-box">
+              <p class="label">Bus ID (Login Username):</p>
+              <p class="value" id="previewBusId"></p>
+            </div>
+            <div class="credential-box">
+              <p class="label">Password:</p>
+              <p class="value" id="previewPassword"></p>
+            </div>
+            <p class="warning">⚠️ Share these credentials with the conductor. They will complete their profile in the app after first login.</p>
+          </div>
+          <button class="btn-primary" onclick="location.reload()">Create Another Bus</button>
+          <button class="btn-secondary" onclick="window.location.href='../fleet/fleet.html'" style="margin-left: 10px;">Go to Fleet</button>
+        </div>
+      </div>
+    </main>
+  </div>
+
+  <script type="module" src="createBus.js"></script>
+</body>
+</html>
