@@ -1,11 +1,21 @@
-/* settings.css - white themed settings page, matches other admin pages */
+/* Dashboard Page CSS */
 
-/* base */
-* { box-sizing:border-box; margin:0; padding:0; font-family: Inter, system-ui, -apple-system, "Segoe UI", Roboto, Arial; }
-body { background:#f6f8fb; color:#0f1724; -webkit-font-smoothing:antialiased; }
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+  font-family: Arial, sans-serif;
+}
 
-/* layout */
-.layout { display:flex; min-height:100vh; }
+body {
+  background: #ebeef3;
+}
+
+.layout {
+  display: flex;
+  height: 100vh;
+}
+
 /* Sidebar */
 .sidebar {
   width: 240px;
@@ -18,7 +28,11 @@ body { background:#f6f8fb; color:#0f1724; -webkit-font-smoothing:antialiased; }
   border-radius: 12px;
 }
 
-.brand { font-weight:700; font-size:20px; margin-bottom:6px; }
+.brand { 
+  font-weight: 700; 
+  font-size: 20px; 
+  margin-bottom: 6px; 
+}
 
 .menu {
   display: flex;
@@ -34,6 +48,7 @@ body { background:#f6f8fb; color:#0f1724; -webkit-font-smoothing:antialiased; }
   font-size: 16px;
   text-decoration: none;
   color: #333;
+  transition: all 0.2s ease;
 }
 
 .menu-item.active,
@@ -42,6 +57,7 @@ body { background:#f6f8fb; color:#0f1724; -webkit-font-smoothing:antialiased; }
   color: #0033cc;
 }
 
+
 .admin-profile {
   margin-top: 20px;
   padding: 10px;
@@ -49,18 +65,20 @@ body { background:#f6f8fb; color:#0f1724; -webkit-font-smoothing:antialiased; }
   border-radius: 6px;
   text-align: center;
   font-size: 14px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
 }
+
+/* Admin image icon */
 .admin-icon {
   width: 32px;
   height: 32px;
   border-radius: 50%;
   object-fit: cover;
-  margin-right: 8px;
-  vertical-align: middle;
   background-color: #ffffff;
 }
-.small.muted { color:#6b7280; font-size:12px; }
-
 /* main area */
 .main { flex:1; padding:20px 28px; }
 .topbar h1 { font-size:22px; margin-bottom:2px; }
