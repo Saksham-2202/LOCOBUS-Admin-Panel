@@ -31,7 +31,7 @@
       <header class="main-header">
         <div>
           <h1>Send Custom Notifications</h1>
-          <p class="muted">Send alerts to all active Conductors/Buses</p>
+          <p class="muted">Send alerts to Conductors or Users</p>
         </div>
         <div class="header-actions">
           <input class="global-search" placeholder="Search notifications..." />
@@ -42,6 +42,31 @@
         <section class="card create-card">
           <h3>Create Notification</h3>
 
+          <!-- Target Audience Selection -->
+          <label class="label">Target Audience *</label>
+          <div class="target-selector">
+            <label class="radio-card">
+              <input type="radio" name="target" value="conductors" checked />
+              <span class="radio-content">
+                <span class="radio-icon">👨‍✈️</span>
+                <span class="radio-text">
+                  <strong>Conductors</strong>
+                  <small>Send to all active conductors</small>
+                </span>
+              </span>
+            </label>
+            <label class="radio-card">
+              <input type="radio" name="target" value="users" />
+              <span class="radio-content">
+                <span class="radio-icon">👥</span>
+                <span class="radio-text">
+                  <strong>Users</strong>
+                  <small>Send to all app users</small>
+                </span>
+              </span>
+            </label>
+          </div>
+
           <label class="label">Notification Title/Subject *</label>
           <input id="ntTitle" class="input" placeholder="Enter notification title..." />
 
@@ -49,8 +74,8 @@
           <textarea id="ntMessage" class="textarea" placeholder="Write your notification message here..."></textarea>
           <div class="small muted rightcount" id="charCount">0/500</div>
 
-          <div style="margin-top: 15px; font-size: 13px; color: #0b58d0; background: #eef2ff; padding: 10px; border-radius: 6px;">
-            <strong>Note:</strong> This notification will be sent to <strong>All Active Conductors</strong>.
+          <div id="targetInfo" class="info-box">
+            <strong>Note:</strong> This notification will be sent to <strong id="targetText">All Active Conductors</strong>.
           </div>
 
           <label class="label">Schedule Send Time (Optional)</label>
@@ -63,7 +88,14 @@
         </section>
 
         <aside class="card recent-card">
-          <h3>Recent Notifications</h3>
+          <div class="recent-header">
+            <h3>Recent Notifications</h3>
+            <div class="filter-tabs">
+              <button class="filter-tab active" data-filter="all">All</button>
+              <button class="filter-tab" data-filter="conductors">Conductors</button>
+              <button class="filter-tab" data-filter="users">Users</button>
+            </div>
+          </div>
           <div id="recentList" class="recent-list">
             <div style="padding:20px; text-align:center; color:#999;">Loading notifications...</div>
           </div>
@@ -86,7 +118,7 @@
         <div class="nm-flex">
           <div class="nm-col">
             <div class="nm-label">Target Audience</div>
-            <div id="nmAudience" class="nm-value">All Conductors</div>
+            <div id="nmAudience" class="nm-value"></div>
           </div>
           <div class="nm-col">
             <div class="nm-label">Status</div>
@@ -95,6 +127,7 @@
         </div>
 
         <div class="nm-row"><div class="nm-label">Sent Date & Time</div><div id="nmDate" class="nm-value"></div></div>
+        <div class="nm-row"><div class="nm-label">Expires At</div><div id="nmExpiry" class="nm-value"></div></div>
       </div>
     </div>
   </div>

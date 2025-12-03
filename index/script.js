@@ -1,7 +1,10 @@
-// Dashboard JS - Real-time Bus Tracking with Firebase
+// Dashboard JS - Real-time Bus Tracking & Approval System
 
 import { initializeApp } from "https://www.gstatic.com/firebasejs/9.23.0/firebase-app.js";
-import { getFirestore, collection, onSnapshot, query, where } from "https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore.js";
+import { 
+  getFirestore, collection, onSnapshot, query, where, 
+  doc, setDoc, deleteDoc, addDoc, serverTimestamp, getDoc 
+} from "https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore.js";
 
 // Firebase Configuration
 const firebaseConfig = {
@@ -25,6 +28,7 @@ const fleetUpdateIndicator = document.getElementById('fleetUpdateIndicator');
 const logoutBtn = document.getElementById('logoutBtn');
 const adminNameEl = document.getElementById('adminName');
 const searchInput = document.querySelector('.search');
+const pendingListEl = document.getElementById('pendingList');
 
 // Check if admin is logged in
 function checkAuth() {
@@ -60,7 +64,6 @@ if (logoutBtn) {
 function startBusStatusListener() {
   const busesRef = collection(db, 'buses');
   
-  // Listen to ALL changes in the buses collection in real-time
   onSnapshot(busesRef, (snapshot) => {
     let totalBuses = 0;
     let activeBuses = 0;
@@ -68,41 +71,23 @@ function startBusStatusListener() {
     snapshot.forEach((doc) => {
       const busData = doc.data();
       totalBuses++;
-      
-      // Check if bus is active based on your database structure
-      // Your structure: buses/{docId}/liveStatus/status = "active" or "inactive"
       if (busData.liveStatus && busData.liveStatus.status === 'active') {
         activeBuses++;
       }
     });
     
-    // Update the UI
     updateFleetDisplay(activeBuses, totalBuses);
-    
-    // Show update indicator
     flashUpdateIndicator();
-    
-    console.log(`Fleet Update: ${activeBuses}/${totalBuses} buses active`);
   }, (error) => {
     console.error('Error listening to bus status:', error);
-    activeBusCountEl.textContent = 'Error';
-    totalBusCountEl.textContent = 'Error';
   });
 }
 
-// Update Fleet Display
 function updateFleetDisplay(active, total) {
-  activeBusCountEl.textContent = active;
-  totalBusCountEl.textContent = total;
-  
-  // Optional: Calculate and update on-time percentage
-  if (total > 0) {
-    const onTimePercent = Math.round((active / total) * 100);
-    // You can update another stat box if needed
-  }
+  if(activeBusCountEl) activeBusCountEl.textContent = active;
+  if(totalBusCountEl) totalBusCountEl.textContent = total;
 }
 
-// Flash the update indicator when data changes
 function flashUpdateIndicator() {
   if (fleetUpdateIndicator) {
     fleetUpdateIndicator.classList.add('flash');
@@ -112,73 +97,150 @@ function flashUpdateIndicator() {
   }
 }
 
-// Search functionality
-if (searchInput) {
-  searchInput.addEventListener('input', () => {
-    console.log('Searching:', searchInput.value);
-    // Implement search logic here if needed
-  });
-}
+// --- NEW: Pending Approvals Logic ---
 
-// Load pending approvals from Firestore (optional)
 function loadPendingApprovals() {
-  // You can fetch approval requests from Firestore here
-  console.log('Loading pending approvals...');
+  if(!pendingListEl) return;
   
-  // Example: Listen to approvals collection
-  // const approvalsRef = collection(db, 'approvals');
-  // onSnapshot(approvalsRef, (snapshot) => {
-  //   // Update approvals list
-  // });
-}
+  const pendingRef = collection(db, 'pending_approvals');
 
-// Load complaints count (optional)
-function loadComplaints() {
-  const complaintsRef = collection(db, 'complaints');
-  const unresolvedQuery = query(complaintsRef, where('status', '==', 'unresolved'));
-  
-  onSnapshot(unresolvedQuery, (snapshot) => {
-    const complaintsCountEl = document.getElementById('complaintsCount');
-    if (complaintsCountEl) {
-      complaintsCountEl.textContent = snapshot.size;
+  onSnapshot(pendingRef, (snapshot) => {
+    pendingListEl.innerHTML = ''; // Clear existing list
+
+    if (snapshot.empty) {
+      pendingListEl.innerHTML = `
+        <div class="list empty" style="justify-content:center; color:#9ca3af;">
+           No pending approvals
+        </div>
+      `;
+      return;
     }
-  }, (error) => {
-    console.error('Error loading complaints:', error);
+
+    snapshot.forEach((docSnap) => {
+      const data = docSnap.data();
+      const docId = docSnap.id;
+      const stopsCount = data.stops_data ? data.stops_data.length : 0;
+      
+      const itemHTML = `
+        <div class="item" id="item-${docId}" style="margin-bottom:10px;">
+          <div style="display:flex; justify-content:space-between; align-items:start;">
+            <div>
+              <p style="font-weight:bold; margin-bottom:4px; font-size:14px;">
+                ${data.type}: ${data.route_data.from} ➝ ${data.route_data.to}
+              </p>
+              <small class="muted" style="color:#6b7280; font-size:12px;">
+                By: ${data.conductor_name} • Stops: ${stopsCount}
+              </small>
+            </div>
+            <div style="display:flex; gap:8px;">
+               <button 
+                 onclick="window.handleReject('${docId}')" 
+                 style="background:#ef4444; padding:5px 10px; font-size:12px; border:none; color:white; border-radius:4px; cursor:pointer;">
+                 Reject
+               </button>
+               <button 
+                 onclick="window.handleApprove('${docId}')" 
+                 style="background:#10b981; padding:5px 10px; font-size:12px; border:none; color:white; border-radius:4px; cursor:pointer;">
+                 Approve
+               </button>
+            </div>
+          </div>
+        </div>
+      `;
+      pendingListEl.innerHTML += itemHTML;
+    });
   });
 }
 
-// Load SOS count (optional)
-function loadSOS() {
-  const sosRef = collection(db, 'sos');
-  const activeSOSQuery = query(sosRef, where('status', '==', 'active'));
-  
-  onSnapshot(activeSOSQuery, (snapshot) => {
-    const sosCountEl = document.getElementById('sosCount');
-    if (sosCountEl) {
-      sosCountEl.textContent = snapshot.size;
+// Expose Approve/Reject to Window scope so HTML onclick can find them
+window.handleApprove = async (docId) => {
+  const btn = document.querySelector(`#item-${docId} button:last-child`);
+  if(btn) {
+    btn.textContent = "Processing...";
+    btn.disabled = true;
+  }
+
+  try {
+    // 1. Get the Pending Document
+    const pendingRef = doc(db, 'pending_approvals', docId);
+    const docSnap = await getDoc(pendingRef);
+
+    if (!docSnap.exists()) {
+      alert("Request no longer exists.");
+      return;
     }
-  }, (error) => {
-    console.error('Error loading SOS:', error);
-  });
-}
+
+    const pendingData = docSnap.data();
+    const routeData = pendingData.route_data;
+    const stopsData = pendingData.stops_data;
+
+    // 2. Determine ID (Update existing or Create new)
+    let liveRouteRef;
+    if (pendingData.target_route_id) {
+       liveRouteRef = doc(db, 'bus_routes', pendingData.target_route_id);
+    } else {
+       liveRouteRef = doc(collection(db, 'bus_routes'));
+    }
+
+    // 3. Save main route info to Live Collection
+    await setDoc(liveRouteRef, {
+      ...routeData,
+      updated_at: serverTimestamp(),
+      approved_by: "Admin"
+    });
+
+    // 4. Save Stops (as subcollection)
+    // First clear old stops if updating (optional/safety step omitted for brevity)
+    const stopsCollectionRef = collection(liveRouteRef, 'stops');
+    
+    // Add all stops concurrently
+    const stopPromises = stopsData.map(stop => {
+      return addDoc(stopsCollectionRef, {
+        name: stop.name,
+        lat: stop.lat,
+        lng: stop.lng,
+        order: stop.order,
+        timestamp: serverTimestamp()
+      });
+    });
+    
+    await Promise.all(stopPromises);
+
+    // 5. Delete from Pending
+    await deleteDoc(pendingRef);
+
+    alert("Route Approved & Live!");
+
+  } catch (error) {
+    console.error("Approval Error:", error);
+    alert("Error approving route: " + error.message);
+    if(btn) {
+      btn.textContent = "Approve";
+      btn.disabled = false;
+    }
+  }
+};
+
+window.handleReject = async (docId) => {
+  if(!confirm("Are you sure you want to reject this update?")) return;
+
+  try {
+    const pendingRef = doc(db, 'pending_approvals', docId);
+    await deleteDoc(pendingRef);
+  } catch (error) {
+    console.error("Reject Error:", error);
+    alert("Error rejecting.");
+  }
+};
 
 // Initialize Dashboard
 function initDashboard() {
-  // Check authentication first
   const admin = checkAuth();
   if (!admin) return;
   
-  // Start real-time listeners
-  console.log('Starting real-time bus status listener...');
   startBusStatusListener();
-  
-  // Load other data
-  loadPendingApprovals();
-  
-  // Optionally load complaints and SOS if collections exist
-  // loadComplaints();
-  // loadSOS();
+  loadPendingApprovals(); // Start listening for approvals
 }
 
-// Start the dashboard when page loads
+// Start
 document.addEventListener('DOMContentLoaded', initDashboard);

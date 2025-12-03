@@ -11,14 +11,14 @@
     <aside class="sidebar">
       <div class="brand">LOCO BUS 🅱️</div>
       <nav class="menu">
-  <a class="menu-item active" href="../index/index.html">Dashboard</a>
-  <a class="menu-item" href="../live-map/live-map.html">Live Map</a>
-  <a class="menu-item" href="../fleet/fleet.html">Fleet Management</a>
-  <a class="menu-item" href="../broadCasts/broadCasts.html">Broadcasts</a>
-  <a class="menu-item" href="../notifications/notifications.html">Notifications</a>
-  <a class="menu-item" href="../index/createBus.html">Account Panel</a>
-  <a class="menu-item" href="../help desk/helpDesk.html">Help Desk</a>
-  <a class="menu-item" href="../settings/settings.html">Settings</a>
+        <a class="menu-item active" href="../index/index.html">Dashboard</a>
+        <a class="menu-item" href="../live-map/live-map.html">Live Map</a>
+        <a class="menu-item" href="../fleet/fleet.html">Fleet Management</a>
+        <a class="menu-item" href="../broadCasts/broadCasts.html">Broadcasts</a>
+        <a class="menu-item" href="../notifications/notifications.html">Notifications</a>
+        <a class="menu-item" href="../index/createBus.html">Account Panel</a>
+        <a class="menu-item" href="../help desk/helpDesk.html">Help Desk</a>
+        <a class="menu-item" href="../settings/settings.html">Settings</a>
       </nav>
 
       <div class="admin-profile">
@@ -36,7 +36,6 @@
       </header>
       
       <section class="stats-row">
-        <!-- Active Fleet Box with Real-time Data -->
         <div class="stat-box">
           <h3>Active Fleet</h3>
           <p class="value">
@@ -75,27 +74,8 @@
             <h3>Pending Approvals</h3>
             <button>Check All</button>
           </div>
-          <div class="list">
-            <div class="item">
-              <p>Conductor Jaspreet Singh added stop</p>
-              <small>[Bus No. PB 07 XXXX]</small>
-              <button>More Info</button>
-            </div>
-            <div class="item">
-              <p>Conductor Raju modified new stop</p>
-              <small>[Bus No. PB 29 XXXX]</small>
-              <button>More Info</button>
-            </div>
-            <div class="item">
-              <p>New Staff member: Daksh Bhadwa</p>
-              <small>[Bus No. PB 10 XXXX]</small>
-              <button>More Info</button>
-            </div>
-            <div class="item">
-              <p>New Staff member: Harsh Tempo</p>
-              <small>[Bus No. PB 19 XXXX]</small>
-              <button>More Info</button>
-            </div>
+          <div class="list" id="pendingList">
+             <div class="list empty">Loading requests...</div>
           </div>
         </div>
 
@@ -136,7 +116,6 @@
     </main>
   </div>
 
-  <!-- Firebase SDKs -->
   <script type="module" src="script.js"></script>
 </body>
 </html>

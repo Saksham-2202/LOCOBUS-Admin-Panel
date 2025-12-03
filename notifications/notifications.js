@@ -1,9 +1,9 @@
-/* notifications.js - Firebase Integration */
+/* notifications.js - Enhanced with separate conductor/user notifications and auto-deletion */
 
 import { initializeApp } from "https://www.gstatic.com/firebasejs/9.23.0/firebase-app.js";
-import { getFirestore, collection, addDoc, serverTimestamp, query, orderBy, onSnapshot } from "https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore.js";
+import { getFirestore, collection, addDoc, serverTimestamp, query, orderBy, onSnapshot, where, deleteDoc, doc, Timestamp } from "https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore.js";
 
-// Firebase Configuration (Same as your fleet.js)
+// Firebase Configuration
 const firebaseConfig = {
   apiKey: "AIzaSyCRtx7Oyda48Hz0eu-BiNrGYiK3_36Vl-c",
   authDomain: "locobus-e4274.firebaseapp.com",
@@ -23,10 +23,41 @@ document.addEventListener('DOMContentLoaded', () => {
   const message = document.getElementById('ntMessage');
   const charCount = document.getElementById('charCount');
   const schedule = document.getElementById('ntSchedule');
+  const targetInfo = document.getElementById('targetInfo');
+  const targetText = document.getElementById('targetText');
 
   const sendNow = document.getElementById('sendNow');
   const scheduleBtn = document.getElementById('scheduleBtn');
   const recentList = document.getElementById('recentList');
+
+  const targetRadios = document.querySelectorAll('input[name="target"]');
+  const filterTabs = document.querySelectorAll('.filter-tab');
+
+  let currentFilter = 'all';
+
+  // ---------------- TARGET SELECTION ----------------
+  targetRadios.forEach(radio => {
+    radio.addEventListener('change', (e) => {
+      const target = e.target.value;
+      if (target === 'conductors') {
+        targetText.textContent = 'All Active Conductors';
+        targetInfo.classList.remove('users');
+      } else {
+        targetText.textContent = 'All App Users';
+        targetInfo.classList.add('users');
+      }
+    });
+  });
+
+  // ---------------- FILTER TABS ----------------
+  filterTabs.forEach(tab => {
+    tab.addEventListener('click', () => {
+      filterTabs.forEach(t => t.classList.remove('active'));
+      tab.classList.add('active');
+      currentFilter = tab.dataset.filter;
+      subscribeToNotifications();
+    });
+  });
 
   // ---------------- CHAR COUNTER ----------------
   function updateCount() {
@@ -36,54 +67,174 @@ document.addEventListener('DOMContentLoaded', () => {
   }
   message.addEventListener('input', updateCount);
 
-  // ---------------- FETCH NOTIFICATIONS (REALTIME) ----------------
+  // ---------------- GET SELECTED TARGET ----------------
+  function getSelectedTarget() {
+    const selected = document.querySelector('input[name="target"]:checked');
+    return selected ? selected.value : 'conductors';
+  }
+
+  // ---------------- FETCH NOTIFICATIONS (REALTIME WITH FILTER) ----------------
   function subscribeToNotifications() {
-    const q = query(collection(db, "notifications"), orderBy("createdAt", "desc"));
+    let q;
+    
+    if (currentFilter === 'all') {
+      // Fetch from both collections
+      fetchBothCollections();
+      return;
+    }
+    
+    // Fetch from specific collection
+    const collectionName = currentFilter === 'conductors' ? 'notifications' : 'user_notifications';
+    q = query(collection(db, collectionName), orderBy("createdAt", "desc"));
     
     onSnapshot(q, (snapshot) => {
-      recentList.innerHTML = '';
-      
-      if (snapshot.empty) {
-        recentList.innerHTML = `<div style="padding:20px; text-align:center; color:#999;">No recent notifications</div>`;
-        return;
-      }
+      displayNotifications(snapshot, currentFilter);
+    });
+  }
 
+  function fetchBothCollections() {
+    const notifications = [];
+    let conductorsDone = false;
+    let usersDone = false;
+
+    const qConductors = query(collection(db, "notifications"), orderBy("createdAt", "desc"));
+    const qUsers = query(collection(db, "user_notifications"), orderBy("createdAt", "desc"));
+
+    onSnapshot(qConductors, (snapshot) => {
+      const conductorNotifs = [];
       snapshot.forEach((docSnap) => {
-        const data = docSnap.data();
-        const dateObj = data.createdAt ? data.createdAt.toDate() : new Date();
-        const dateStr = dateObj.toLocaleString();
-        
-        // Render item
-        const item = document.createElement('div');
-        item.className = 'recent-item';
-        
-        // Metadata for modal
-        item.dataset.message = data.message || '';
-        item.dataset.title = data.title || '';
-        item.dataset.date = dateStr;
-        item.dataset.status = data.status || 'sent';
-
-        item.innerHTML = `
-          <div>
-            <div class="r-title">${data.title}</div>
-            <div class="r-meta">All Conductors • ${dateStr}</div>
-          </div>
-          <div class="r-badges">
-            <span class="pill ${data.status === 'sent' ? 'sent' : 'scheduled'}">
-              ${data.status === 'sent' ? 'Sent' : 'Scheduled'}
-            </span>
-            <a class="view-detail" href="#">View Details</a>
-          </div>
-        `;
-
-        // view details click → open modal
-        item.querySelector(".view-detail").addEventListener("click", (e) => {
-          e.preventDefault();
-          openNotifDetails(item);
+        conductorNotifs.push({
+          id: docSnap.id,
+          data: docSnap.data(),
+          target: 'conductors'
         });
-
-        recentList.appendChild(item);
       });
+      
+      // Merge and sort
+      const allNotifs = [...conductorNotifs];
+      
+      // Get user notifications too
+      onSnapshot(qUsers, (userSnapshot) => {
+        userSnapshot.forEach((docSnap) => {
+          allNotifs.push({
+            id: docSnap.id,
+            data: docSnap.data(),
+            target: 'users'
+          });
+        });
+        
+        // Sort by createdAt
+        allNotifs.sort((a, b) => {
+          const timeA = a.data.createdAt ? a.data.createdAt.toMillis() : 0;
+          const timeB = b.data.createdAt ? b.data.createdAt.toMillis() : 0;
+          return timeB - timeA;
+        });
+        
+        displayCombinedNotifications(allNotifs);
+      });
+    });
+  }
+
+  function displayCombinedNotifications(notifs) {
+    recentList.innerHTML = '';
+    
+    if (notifs.length === 0) {
+      recentList.innerHTML = `<div style="padding:20px; text-align:center; color:#999;">No recent notifications</div>`;
+      return;
+    }
+
+    notifs.forEach((item) => {
+      const data = item.data;
+      const dateObj = data.createdAt ? data.createdAt.toDate() : new Date();
+      const expiryObj = data.expiresAt ? data.expiresAt.toDate() : null;
+      const dateStr = dateObj.toLocaleString();
+      const expiryStr = expiryObj ? expiryObj.toLocaleString() : 'N/A';
+      
+      const targetLabel = item.target === 'conductors' ? 'Conductors' : 'Users';
+      
+      // Render item
+      const itemEl = document.createElement('div');
+      itemEl.className = 'recent-item';
+      
+      // Metadata for modal
+      itemEl.dataset.message = data.message || '';
+      itemEl.dataset.title = data.title || '';
+      itemEl.dataset.date = dateStr;
+      itemEl.dataset.expiry = expiryStr;
+      itemEl.dataset.status = data.status || 'sent';
+      itemEl.dataset.target = targetLabel;
+
+      itemEl.innerHTML = `
+        <div>
+          <div class="r-title">${data.title}</div>
+          <div class="r-meta">${targetLabel} • ${dateStr}</div>
+        </div>
+        <div class="r-badges">
+          <span class="pill ${item.target}">${targetLabel}</span>
+          <span class="pill ${data.status === 'sent' ? 'sent' : 'scheduled'}">
+            ${data.status === 'sent' ? 'Sent' : 'Scheduled'}
+          </span>
+          <a class="view-detail" href="#">View Details</a>
+        </div>
+      `;
+
+      itemEl.querySelector(".view-detail").addEventListener("click", (e) => {
+        e.preventDefault();
+        openNotifDetails(itemEl);
+      });
+
+      recentList.appendChild(itemEl);
+    });
+  }
+
+  function displayNotifications(snapshot, targetType) {
+    recentList.innerHTML = '';
+    
+    if (snapshot.empty) {
+      recentList.innerHTML = `<div style="padding:20px; text-align:center; color:#999;">No recent notifications</div>`;
+      return;
+    }
+
+    snapshot.forEach((docSnap) => {
+      const data = docSnap.data();
+      const dateObj = data.createdAt ? data.createdAt.toDate() : new Date();
+      const expiryObj = data.expiresAt ? data.expiresAt.toDate() : null;
+      const dateStr = dateObj.toLocaleString();
+      const expiryStr = expiryObj ? expiryObj.toLocaleString() : 'N/A';
+      
+      const targetLabel = targetType === 'conductors' ? 'Conductors' : 'Users';
+      
+      // Render item
+      const item = document.createElement('div');
+      item.className = 'recent-item';
+      
+      item.dataset.message = data.message || '';
+      item.dataset.title = data.title || '';
+      item.dataset.date = dateStr;
+      item.dataset.expiry = expiryStr;
+      item.dataset.status = data.status || 'sent';
+      item.dataset.target = targetLabel;
+
+      item.innerHTML = `
+        <div>
+          <div class="r-title">${data.title}</div>
+          <div class="r-meta">${targetLabel} • ${dateStr}</div>
+        </div>
+        <div class="r-badges">
+          <span class="pill ${targetType}">${targetLabel}</span>
+          <span class="pill ${data.status === 'sent' ? 'sent' : 'scheduled'}">
+            ${data.status === 'sent' ? 'Sent' : 'Scheduled'}
+          </span>
+          <a class="view-detail" href="#">View Details</a>
+        </div>
+      `;
+
+      item.querySelector(".view-detail").addEventListener("click", (e) => {
+        e.preventDefault();
+        openNotifDetails(item);
+      });
+
+      recentList.appendChild(item);
     });
   }
 
@@ -105,14 +256,22 @@ document.addEventListener('DOMContentLoaded', () => {
       btn.textContent = 'Sending...';
       btn.disabled = true;
 
-      // Add to Firestore "notifications" collection
-      await addDoc(collection(db, "notifications"), {
+      const target = getSelectedTarget();
+      const collectionName = target === 'conductors' ? 'notifications' : 'user_notifications';
+      
+      // Calculate expiry time (24 hours from now)
+      const now = new Date();
+      const expiresAt = new Date(now.getTime() + 24 * 60 * 60 * 1000);
+
+      // Add to appropriate Firestore collection
+      await addDoc(collection(db, collectionName), {
         title: title.value.trim(),
         message: message.value.trim(),
-        target: "all_conductors", // Automatically targeting all conductors
-        status: status, // 'sent' or 'scheduled'
+        target: target === 'conductors' ? "all_conductors" : "all_users",
+        status: status,
         scheduledFor: scheduledFor ? new Date(scheduledFor) : null,
-        createdAt: serverTimestamp()
+        createdAt: serverTimestamp(),
+        expiresAt: Timestamp.fromDate(expiresAt)
       });
 
       // Clear form
@@ -123,11 +282,17 @@ document.addEventListener('DOMContentLoaded', () => {
       
       btn.textContent = originalText;
       btn.disabled = false;
-      alert(status === 'sent' ? 'Notification Sent!' : 'Notification Scheduled!');
+      
+      const targetLabel = target === 'conductors' ? 'Conductors' : 'Users';
+      alert(`Notification ${status === 'sent' ? 'Sent' : 'Scheduled'} to ${targetLabel}!`);
 
     } catch (error) {
       console.error("Error adding notification: ", error);
       alert("Error sending notification. Check console.");
+      sendNow.textContent = "Send Notification Now";
+      scheduleBtn.textContent = "Schedule Notification";
+      sendNow.disabled = false;
+      scheduleBtn.disabled = false;
     }
   }
 
@@ -145,6 +310,42 @@ document.addEventListener('DOMContentLoaded', () => {
   // Start Listener
   subscribeToNotifications();
 
+  // ---------------- AUTO-DELETE OLD NOTIFICATIONS ----------------
+  function setupAutoDelete() {
+    // Check every 5 minutes for expired notifications
+    setInterval(async () => {
+      const now = new Date();
+      
+      // Check conductor notifications
+      const qConductors = query(
+        collection(db, "notifications"),
+        where("expiresAt", "<=", Timestamp.fromDate(now))
+      );
+      
+      const snapshotConductors = await getDocs(qConductors);
+      snapshotConductors.forEach(async (docSnap) => {
+        await deleteDoc(doc(db, "notifications", docSnap.id));
+        console.log(`Deleted expired conductor notification: ${docSnap.id}`);
+      });
+      
+      // Check user notifications
+      const qUsers = query(
+        collection(db, "user_notifications"),
+        where("expiresAt", "<=", Timestamp.fromDate(now))
+      );
+      
+      const snapshotUsers = await getDocs(qUsers);
+      snapshotUsers.forEach(async (docSnap) => {
+        await deleteDoc(doc(db, "user_notifications", docSnap.id));
+        console.log(`Deleted expired user notification: ${docSnap.id}`);
+      });
+      
+    }, 5 * 60 * 1000); // Every 5 minutes
+  }
+
+  // Note: For production, you should use Firebase Cloud Functions for auto-deletion
+  // This client-side approach is a fallback
+  setupAutoDelete();
 
   // ============================================================
   // MODAL LOGIC
@@ -157,12 +358,14 @@ document.addEventListener('DOMContentLoaded', () => {
   const nmAudience = document.getElementById("nmAudience");
   const nmStatus = document.getElementById("nmStatus");
   const nmDate = document.getElementById("nmDate");
+  const nmExpiry = document.getElementById("nmExpiry");
 
   function openNotifDetails(item) {
     nmTitle.textContent = item.dataset.title;
     nmMessage.textContent = item.dataset.message;
-    nmAudience.textContent = "All Conductors"; // Hardcoded logic
+    nmAudience.textContent = item.dataset.target;
     nmDate.textContent = item.dataset.date;
+    nmExpiry.textContent = item.dataset.expiry;
     
     const status = item.dataset.status;
     nmStatus.innerHTML = status === "sent"
