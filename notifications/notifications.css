@@ -261,3 +261,39 @@ body { background:#f6f8fb; color:#111; }
   .notif-modal { width:calc(100% - 48px); padding:14px; }
   .nm-flex { flex-direction:column; gap:8px; }
 }
+
+/* Add to notifications.css */
+
+.action-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-top: 4px;
+}
+
+.btn-delete {
+  background: none;
+  border: none;
+  cursor: pointer;
+  font-size: 16px;
+  padding: 4px;
+  border-radius: 4px;
+  transition: all 0.2s;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.btn-delete:hover {
+  background-color: #fee2e2;
+  transform: scale(1.1);
+}
+
+.icon-trash {
+  filter: grayscale(100%);
+  transition: filter 0.2s;
+}
+
+.btn-delete:hover .icon-trash {
+  filter: none;
+}

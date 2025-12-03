@@ -1,7 +1,7 @@
-/* notifications.js - Enhanced with separate conductor/user notifications and auto-deletion */
+/* notifications.js - Full Code with Delete Functionality */
 
 import { initializeApp } from "https://www.gstatic.com/firebasejs/9.23.0/firebase-app.js";
-import { getFirestore, collection, addDoc, serverTimestamp, query, orderBy, onSnapshot, where, deleteDoc, doc, Timestamp } from "https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore.js";
+import { getFirestore, collection, addDoc, serverTimestamp, query, orderBy, onSnapshot, where, deleteDoc, doc, Timestamp, getDocs } from "https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore.js";
 
 // Firebase Configuration
 const firebaseConfig = {
@@ -94,8 +94,6 @@ document.addEventListener('DOMContentLoaded', () => {
 
   function fetchBothCollections() {
     const notifications = [];
-    let conductorsDone = false;
-    let usersDone = false;
 
     const qConductors = query(collection(db, "notifications"), orderBy("createdAt", "desc"));
     const qUsers = query(collection(db, "user_notifications"), orderBy("createdAt", "desc"));
@@ -115,25 +113,35 @@ document.addEventListener('DOMContentLoaded', () => {
       
       // Get user notifications too
       onSnapshot(qUsers, (userSnapshot) => {
+        // We clear this array to avoid duplicating user notifications on conductor updates
+        // In a real app, merging streams is cleaner with RxJS, but here we rebuild the list
+        // Note: This logic is simplified; iterating both snapshots ensures fresh data.
+        
+        const userNotifs = [];
         userSnapshot.forEach((docSnap) => {
-          allNotifs.push({
+          userNotifs.push({
             id: docSnap.id,
             data: docSnap.data(),
             target: 'users'
           });
         });
+
+        // Combine
+        const combined = [...conductorNotifs, ...userNotifs];
         
         // Sort by createdAt
-        allNotifs.sort((a, b) => {
+        combined.sort((a, b) => {
           const timeA = a.data.createdAt ? a.data.createdAt.toMillis() : 0;
           const timeB = b.data.createdAt ? b.data.createdAt.toMillis() : 0;
           return timeB - timeA;
         });
         
-        displayCombinedNotifications(allNotifs);
+        displayCombinedNotifications(combined);
       });
     });
   }
+
+  // ---------------- DISPLAY & RENDER LOGIC ----------------
 
   function displayCombinedNotifications(notifs) {
     recentList.innerHTML = '';
@@ -144,46 +152,9 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     notifs.forEach((item) => {
-      const data = item.data;
-      const dateObj = data.createdAt ? data.createdAt.toDate() : new Date();
-      const expiryObj = data.expiresAt ? data.expiresAt.toDate() : null;
-      const dateStr = dateObj.toLocaleString();
-      const expiryStr = expiryObj ? expiryObj.toLocaleString() : 'N/A';
-      
-      const targetLabel = item.target === 'conductors' ? 'Conductors' : 'Users';
-      
-      // Render item
-      const itemEl = document.createElement('div');
-      itemEl.className = 'recent-item';
-      
-      // Metadata for modal
-      itemEl.dataset.message = data.message || '';
-      itemEl.dataset.title = data.title || '';
-      itemEl.dataset.date = dateStr;
-      itemEl.dataset.expiry = expiryStr;
-      itemEl.dataset.status = data.status || 'sent';
-      itemEl.dataset.target = targetLabel;
-
-      itemEl.innerHTML = `
-        <div>
-          <div class="r-title">${data.title}</div>
-          <div class="r-meta">${targetLabel} • ${dateStr}</div>
-        </div>
-        <div class="r-badges">
-          <span class="pill ${item.target}">${targetLabel}</span>
-          <span class="pill ${data.status === 'sent' ? 'sent' : 'scheduled'}">
-            ${data.status === 'sent' ? 'Sent' : 'Scheduled'}
-          </span>
-          <a class="view-detail" href="#">View Details</a>
-        </div>
-      `;
-
-      itemEl.querySelector(".view-detail").addEventListener("click", (e) => {
-        e.preventDefault();
-        openNotifDetails(itemEl);
-      });
-
-      recentList.appendChild(itemEl);
+      // Determine collection based on target
+      const collectionName = item.target === 'conductors' ? 'notifications' : 'user_notifications';
+      renderNotificationItem(item.id, item.data, item.target, collectionName);
     });
   }
 
@@ -195,47 +166,81 @@ document.addEventListener('DOMContentLoaded', () => {
       return;
     }
 
+    // Determine collection based on current filter
+    const collectionName = targetType === 'conductors' ? 'notifications' : 'user_notifications';
+
     snapshot.forEach((docSnap) => {
-      const data = docSnap.data();
-      const dateObj = data.createdAt ? data.createdAt.toDate() : new Date();
-      const expiryObj = data.expiresAt ? data.expiresAt.toDate() : null;
-      const dateStr = dateObj.toLocaleString();
-      const expiryStr = expiryObj ? expiryObj.toLocaleString() : 'N/A';
-      
-      const targetLabel = targetType === 'conductors' ? 'Conductors' : 'Users';
-      
-      // Render item
-      const item = document.createElement('div');
-      item.className = 'recent-item';
-      
-      item.dataset.message = data.message || '';
-      item.dataset.title = data.title || '';
-      item.dataset.date = dateStr;
-      item.dataset.expiry = expiryStr;
-      item.dataset.status = data.status || 'sent';
-      item.dataset.target = targetLabel;
-
-      item.innerHTML = `
-        <div>
-          <div class="r-title">${data.title}</div>
-          <div class="r-meta">${targetLabel} • ${dateStr}</div>
-        </div>
-        <div class="r-badges">
-          <span class="pill ${targetType}">${targetLabel}</span>
-          <span class="pill ${data.status === 'sent' ? 'sent' : 'scheduled'}">
-            ${data.status === 'sent' ? 'Sent' : 'Scheduled'}
-          </span>
-          <a class="view-detail" href="#">View Details</a>
-        </div>
-      `;
-
-      item.querySelector(".view-detail").addEventListener("click", (e) => {
-        e.preventDefault();
-        openNotifDetails(item);
-      });
-
-      recentList.appendChild(item);
+      renderNotificationItem(docSnap.id, docSnap.data(), targetType, collectionName);
     });
+  }
+
+  // Helper function to render HTML for a single item (Avoids code duplication)
+  function renderNotificationItem(docId, data, targetType, collectionName) {
+    const dateObj = data.createdAt ? data.createdAt.toDate() : new Date();
+    const expiryObj = data.expiresAt ? data.expiresAt.toDate() : null;
+    const dateStr = dateObj.toLocaleString();
+    const expiryStr = expiryObj ? expiryObj.toLocaleString() : 'N/A';
+    
+    const targetLabel = targetType === 'conductors' ? 'Conductors' : 'Users';
+    
+    const itemEl = document.createElement('div');
+    itemEl.className = 'recent-item';
+    
+    // Metadata for modal
+    itemEl.dataset.title = data.title || '';
+    itemEl.dataset.message = data.message || '';
+    itemEl.dataset.date = dateStr;
+    itemEl.dataset.expiry = expiryStr;
+    itemEl.dataset.status = data.status || 'sent';
+    itemEl.dataset.target = targetLabel;
+
+    itemEl.innerHTML = `
+      <div>
+        <div class="r-title">${data.title}</div>
+        <div class="r-meta">${targetLabel} • ${dateStr}</div>
+      </div>
+      <div class="r-badges">
+        <span class="pill ${targetType}">${targetLabel}</span>
+        <span class="pill ${data.status === 'sent' ? 'sent' : 'scheduled'}">
+          ${data.status === 'sent' ? 'Sent' : 'Scheduled'}
+        </span>
+        <div class="action-row">
+          <a class="view-detail" href="#">View Details</a>
+          <button class="btn-delete" title="Delete Permanently">🗑️</button>
+        </div>
+      </div>
+    `;
+
+    // View Details Listener
+    itemEl.querySelector(".view-detail").addEventListener("click", (e) => {
+      e.preventDefault();
+      openNotifDetails(itemEl);
+    });
+
+    // DELETE BUTTON LISTENER
+    itemEl.querySelector(".btn-delete").addEventListener("click", (e) => {
+      e.stopPropagation(); // Prevent bubbling to card click if added later
+      deleteNotification(docId, collectionName);
+    });
+
+    recentList.appendChild(itemEl);
+  }
+
+  // ---------------- DELETE LOGIC ----------------
+  
+  async function deleteNotification(docId, collectionName) {
+    const confirmDelete = confirm("Are you sure you want to PERMANENTLY delete this notification? This will remove it from all devices.");
+    
+    if (confirmDelete) {
+      try {
+        await deleteDoc(doc(db, collectionName, docId));
+        // The onSnapshot listener will automatically refresh the UI
+        alert("Notification deleted successfully.");
+      } catch (error) {
+        console.error("Error deleting document: ", error);
+        alert("Error deleting notification: " + error.message);
+      }
+    }
   }
 
   // ---------------- VALIDATION ----------------
