@@ -1,13 +1,23 @@
-:root{
-      --accent:#2563eb;
-      --bg:#ffffff;
-      --muted:#6b7280;
-      --card-shadow: 0 8px 24px rgba(2,6,23,0.06);
-    }
-    html,body { height:100%; margin:0; padding:0; font-family: Inter, system-ui, -apple-system, 'Segoe UI', Roboto, Arial; background:#f7f8fb; }
-.layout { display:flex; min-height:100vh; }
+:root {
+  --accent:#2563eb;
+  --bg:#ffffff;
+  --muted:#6b7280;
+  --card-shadow:0 8px 24px rgba(2,6,23,0.06);
+}
 
-/* sidebar (same look as other pages) */
+html,body {
+  margin:0;
+  padding:0;
+  height:100%;
+  font-family: Inter, system-ui, sans-serif;
+  background:#f7f8fb;
+}
+
+.layout {
+  display:flex;
+  min-height:100vh;
+}
+
 /* Sidebar */
 .sidebar {
   width: 240px;
@@ -20,12 +30,16 @@
   border-radius: 12px;
 }
 
-.brand { font-weight:700; font-size:20px; margin-bottom:6px; }
+.brand { 
+  font-weight: 650; 
+  font-size: 21.5px; 
+  margin-bottom: 6px; 
+}
 
 .menu {
   display: flex;
   flex-direction: column;
-  gap: 12px;
+  gap: 10px;
   margin-bottom: auto;
 }
 
@@ -36,6 +50,8 @@
   font-size: 16px;
   text-decoration: none;
   color: #333;
+  transition: all 0.2s ease;
+  font-weight: 450;
 }
 
 .menu-item.active,
@@ -44,50 +60,89 @@
   color: #0033cc;
 }
 
+/* CONTROLS */
+.controls {
+  margin-top:20px;
+  display:flex;
+  gap:8px;
+}
+
+.btn {
+  background:var(--accent);
+  padding:8px 12px;
+  border-radius:8px;
+  color:white;
+  border:none;
+  font-weight:700;
+  cursor:pointer;
+}
+
+/* BUS LIST */
+.bus-list {
+  margin-top:20px;
+  overflow-y:auto;
+  flex:1;
+  display:flex;
+  flex-direction:column;
+  gap:10px;
+}
+
+.bus-card {
+  display:flex;
+  align-items:center;
+  gap:10px;
+  padding:10px;
+  background:white;
+  border-radius:10px;
+  box-shadow:var(--card-shadow);
+  cursor:pointer;
+}
+
+.bus-info { flex:1; font-weight:700; }
+.bus-sub { font-size:12px; color:var(--muted); }
+
+/* ADMIN PROFILE FIXED AT BOTTOM */
 .admin-profile {
-  margin-top: 20px;
-  padding: 10px;
-  background: #f1f1f1;
-  border-radius: 6px;
-  text-align: center;
-  font-size: 14px;
+  margin-top:auto;
+  padding-top:8px;
+  border-top:1px solid #eee;
+  display:flex;
+  align-items:center;
+  gap:10px;
+  font-weight:700;
+  margin-bottom: 15px;
 }
+
 .admin-icon {
-  width: 32px;
-  height: 32px;
-  border-radius: 50%;
-  object-fit: cover;
-  margin-right: 8px;
-  vertical-align: middle;
-  background-color: #ffffff;
+  width:40px;
+  height:40px;
+  border-radius:8px;
+  object-fit:cover;
+  background:#ddd;
 }
-    /* Menu */
-    .menu { margin-top:8px; display:flex; flex-direction:column; gap:8px; }
-    .menu-item {
-      display:block; padding:10px 12px; border-radius:8px; color:#111827; text-decoration:none; font-weight:600; transition: all .12s ease;
-    }
-    /* Controls */
-    .controls { display:flex; gap:8px; }
-    .btn { background:var(--accent); color:white; border:0; padding:8px 10px; border-radius:8px; cursor:pointer; font-weight:700; }
 
-    /* Bus list */
-    .bus-list { margin-top:10px; overflow:auto; max-height:300px; display:flex; flex-direction:column; gap:8px; }
-    .bus-card { display:flex; align-items:center; gap:10px; padding:8px; border-radius:8px; background:#fff; box-shadow: var(--card-shadow); cursor:pointer; }
-    .bus-info { flex:1; font-weight:700; font-size:13px; color:#111827; }
-    .bus-sub { font-size:12px; color:var(--muted); font-weight:600; }
+/* MAP */
+#map {
+  position:absolute;
+  left:300px;
+  top:0;
+  right:0;
+  bottom:0;
+}
 
-    /* Admin profile at bottom */
-    .admin-profile { margin-top:auto; display:flex; align-items:center; gap:10px; padding-top:12px; border-top:1px solid #f3f4f6; font-weight:700; color:#111827; }
-    .admin-icon { width:40px; height:40px; border-radius:8px; object-fit:cover; background:#e5e7eb; }
+/* MARKERS */
+.bus-marker {
+  display:inline-flex;
+  align-items:center;
+  justify-content:center;
+  padding:6px 8px;
+  border-radius:6px;
+  color:white;
+  font-weight:800;
+  font-size:12px;
+  box-shadow:0 8px 20px rgba(2,6,23,0.12);
+}
 
-    /* Map */
-    #map { position:absolute; left:300px; top:0; right:0; bottom:0; z-index:0; }
-    @media (max-width:900px){ .sidebar { width:260px; } #map { left:260px; } }
-
-    /* Marker styles (divIcon inner content) */
-    .bus-marker {
-      display:inline-flex; align-items:center; justify-content:center; padding:6px 8px; border-radius:6px; color:#fff; font-weight:800; box-shadow: 0 8px 20px rgba(2,6,23,0.12); font-size:12px;
-    }
-    .marker-running { background:#10b981; }
-    .marker-idle { background:#f59e0b; }
-    .marker-delayed { background:#ef4444; }
+.marker-running { background:#10b981; }
+.marker-idle { background:#f59e0b; }
+.marker-delayed { background:#ef4444; }

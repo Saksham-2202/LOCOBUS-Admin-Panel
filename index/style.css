@@ -51,20 +51,12 @@ body {
   transition: all 0.2s ease;
 }
 
-.menu-item.active {
-  background: #0b58d0;
-  color: #fff;
-}
-
+.menu-item.active,
 .menu-item:hover {
   background: #e6ecff;
   color: #0033cc;
 }
 
-.menu-item.active:hover {
-  background: #0b58d0;
-  color: #fff;
-}
 
 .admin-profile {
   margin-top: 20px;
