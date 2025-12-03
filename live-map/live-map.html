@@ -22,181 +22,199 @@
     <div class="brand">LOCO BUS 🅱️</div>
 
     <nav class="menu">
-  <a class="menu-item" href="../index/index.html">Dashboard</a>
-  <a class="menu-item active" href="../live-map/live-map.html">Live Map</a>
-  <a class="menu-item" href="../fleet/fleet.html">Fleet Management</a>
-  <a class="menu-item" href="../broadCasts/broadCasts.html">Broadcasts</a>
-  <a class="menu-item" href="../notifications/notifications.html">Notifications</a>
-  <a class="menu-item" href="../help desk/helpDesk.html">Help Desk</a>
-  <a class="menu-item" href="../settings/settings.html">Settings</a>
+      <a class="menu-item" href="../index/index.html">Dashboard</a>
+      <a class="menu-item active" href="../live-map/live-map.html">Live Map</a>
+      <a class="menu-item" href="../fleet/fleet.html">Fleet Management</a>
+      <a class="menu-item" href="../broadCasts/broadCasts.html">Broadcasts</a>
+      <a class="menu-item" href="../notifications/notifications.html">Notifications</a>
+      <a class="menu-item " href="../index/createBus.html">Account Panel</a>
+      <a class="menu-item" href="../help desk/helpDesk.html">Help Desk</a>
+      <a class="menu-item" href="../settings/settings.html">Settings</a>
+    </nav>
 
-</nav>
     <div class="controls">
       <button id="fitAll" class="btn">Fit All</button>
-      <button id="toggleSim" class="btn">Test Mode</button>
+      <button id="simulate" class="btn">Simulate</button>
     </div>
 
-    <div class="bus-list" id="list"><!-- bus items injected --></div>
+    <div class="bus-list" id="list"></div>
 
-    
+    <!-- ADMIN BOX AT BOTTOM -->
+    <div class="admin-profile">
+      <img src="admin img.png" class="admin-icon" />
+      ADMIN_33
+    </div>
   </aside>
-<div class="admin-profile">
-        <img src="admin img.png" class="admin-icon" />
-        ADMIN_33
-      </div>
+
+  <!-- MAP -->
   <div id="map"></div>
 
-  <script>
-    // Basic Leaflet load check
-    if (typeof L === 'undefined') {
-      document.body.innerHTML = '<div style="padding:20px;">Leaflet failed to load. Check your internet or CDN.</div>';
-      throw new Error('Leaflet not loaded');
-    }
+</div>
 
-    // Create map centered on New Delhi
-    const map = L.map('map', { zoomControl: true }).setView([28.6139, 77.2090], 12);
+<!-- JS Logic -->
+<script>
+  if (typeof L === 'undefined') {
+    document.body.innerHTML = '<div style="padding:20px;">Leaflet failed to load. Check your internet.</div>';
+    throw new Error('Leaflet missing');
+  }
 
-    // OSM tiles (free)
-    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-      maxZoom: 19,
-      attribution: '© OpenStreetMap contributors'
-    }).addTo(map);
+  const map = L.map('map').setView([28.6139, 77.2090], 12);
 
-    // keep buses in a Map
-    const buses = new Map();
+  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+    maxZoom: 19,
+    attribution: '© OpenStreetMap'
+  }).addTo(map);
 
-    // safe escapeHtml
-    function escapeHtml(str){
-      if (str === undefined || str === null) return '';
-      return String(str)
-        .replace(/&/g, '&amp;')
-        .replace(/</g, '&lt;')
-        .replace(/>/g, '&gt;')
-        .replace(/"/g, '&quot;')
-        .replace(/'/g, '&#39;');
-    }
+  const buses = new Map();
 
-    // make a DivIcon for a bus
-    function makeIcon(data){
-      const status = (data.status || '').toLowerCase();
-      const cls = status === 'idle' ? 'marker-idle' : (status === 'delayed' ? 'marker-delayed' : 'marker-running');
-      const content = '<div class="bus-marker ' + cls + '">' + escapeHtml(data.number || 'BUS') + '</div>';
-      return L.divIcon({ html: content, className: '', iconSize: [48, 28], iconAnchor: [24, 14] });
-    }
+  function escapeHtml(str){
+    if (str == null) return "";
+    return String(str)
+      .replace(/&/g,'&amp;')
+      .replace(/</g,'&lt;')
+      .replace(/>/g,'&gt;');
+  }
 
-    // add or update bus marker
-    function upsertBus(id, data) {
-      if (typeof data.lat !== 'number' || typeof data.lng !== 'number') return;
-      const existing = buses.get(id);
-      if (!existing) {
-        const marker = L.marker([data.lat, data.lng], { icon: makeIcon(data) }).addTo(map);
-        marker.on('click', () => showDetails(id));
-        buses.set(id, { marker: marker, data: Object.assign({}, data) });
-        addListItem(id, data);
-      } else {
-        const from = existing.data;
-        const to = Object.assign({}, existing.data, data);
-        existing.data = to;
-        if (from.status !== to.status || from.number !== to.number) {
-          existing.marker.setIcon(makeIcon(to));
-        }
-        animateMarker(existing.marker, [from.lat, from.lng], [to.lat, to.lng]);
-        updateListItem(id, to);
-      }
-    }
-
-    // animate between two latlngs (simple easing)
-    function animateMarker(marker, fromLatLng, toLatLng, duration = 1000) {
-      const start = performance.now();
-      function step(now){
-        const t = Math.min(1, (now - start) / duration);
-        const eased = t < 0.5 ? 2 * t * t : -1 + (4 - 2*t) * t;
-        const lat = fromLatLng[0] + (toLatLng[0] - fromLatLng[0]) * eased;
-        const lng = fromLatLng[1] + (toLatLng[1] - fromLatLng[1]) * eased;
-        marker.setLatLng([lat, lng]);
-        if (t < 1) requestAnimationFrame(step);
-      }
-      requestAnimationFrame(step);
-    }
-
-    // sidebar helpers
-    const listEl = document.getElementById('list');
-
-    function addListItem(id, data){
-      const el = document.createElement('div');
-      el.id = 'bus-' + id;
-      el.className = 'bus-card';
-      el.innerHTML = ''
-        + '<div style="width:10px;height:10px;background:' + statusColor(data.status) + ';border-radius:50%"></div>'
-        + '<div class="bus-info"><div>' + escapeHtml(data.number || id) + '</div>'
-        + '<div class="bus-sub">' + escapeHtml(data.route || 'Route not set') + '</div></div>'
-        + '<div style="font-weight:700">' + formatSpeed(data.speed) + '</div>';
-      el.addEventListener('click', function(){
-        const entry = buses.get(id);
-        if (entry) map.flyTo([entry.data.lat, entry.data.lng], 15);
-      });
-      listEl.appendChild(el);
-    }
-
-    function updateListItem(id, data){
-      const el = document.getElementById('bus-' + id);
-      if (!el) return;
-      el.innerHTML = ''
-        + '<div style="width:10px;height:10px;background:' + statusColor(data.status) + ';border-radius:50%"></div>'
-        + '<div class="bus-info"><div>' + escapeHtml(data.number || id) + '</div>'
-        + '<div class="bus-sub">' + escapeHtml(data.route || 'Route not set') + '</div></div>'
-        + '<div style="font-weight:700">' + formatSpeed(data.speed) + '</div>';
-    }
-
-    function statusColor(s){
-      switch ((s || '').toLowerCase()){
-        case 'running': return '#10b981';
-        case 'idle': return '#f59e0b';
-        case 'delayed': return '#ef4444';
-        default: return '#9ca3af';
-      }
-    }
-    function formatSpeed(v){ return v == null ? '-' : Math.round(v) + ' km/h'; }
-
-    function showDetails(id){
-      const d = buses.get(id).data;
-      alert('Bus ' + (d.number || id) + '\nRoute: ' + (d.route || '-') + '\nSpeed: ' + formatSpeed(d.speed) + '\nLast updated: ' + new Date(d.ts || Date.now()).toLocaleString());
-    }
-
-    // Fit All button
-    document.getElementById('fitAll').addEventListener('click', function(){
-      const coords = [];
-      buses.forEach(function(v){ coords.push([v.data.lat, v.data.lng]); });
-      if (coords.length === 0) return;
-      const bounds = L.latLngBounds(coords);
-      map.fitBounds(bounds.pad(0.15));
+  function makeIcon(data){
+    const s = (data.status || '').toLowerCase();
+    const cls = s === 'idle' ? 'marker-idle' :
+                s === 'delayed' ? 'marker-delayed' :
+                                  'marker-running';
+    return L.divIcon({
+      html:`<div class="bus-marker ${cls}">${escapeHtml(data.number||"BUS")}</div>`,
+      className:'',
+      iconSize:[48,28],
+      iconAnchor:[24,14]
     });
+  }
 
-    // Simulator (no Firebase required)
-    let simInterval = null;
-    document.getElementById('simulate').addEventListener('click', function(){
-      if (simInterval) {
-        clearInterval(simInterval);
-        simInterval = null;
-        this.innerText = 'Simulate';
-        return;
+  function upsertBus(id,data){
+    if(typeof data.lat!=='number'||typeof data.lng!=='number') return;
+    const exist=buses.get(id);
+
+    if(!exist){
+      const marker=L.marker([data.lat,data.lng],{icon:makeIcon(data)}).addTo(map);
+      marker.on("click",()=>showDetails(id));
+
+      buses.set(id,{marker,data:{...data}});
+      addListItem(id,data);
+    }else{
+      const from=exist.data;
+      const to={...exist.data,...data};
+      exist.data=to;
+
+      if(from.status!==to.status || from.number!==to.number){
+        exist.marker.setIcon(makeIcon(to));
       }
-      this.innerText = 'Stop Sim';
-      // initial buses
-      upsertBus('bus1', { number: 'BUS-101', route: 'R1', lat: 28.6139, lng: 77.2090, speed: 30, status: 'running', ts: Date.now() });
-      upsertBus('bus2', { number: 'BUS-102', route: 'R2', lat: 28.62, lng: 77.20, speed: 25, status: 'running', ts: Date.now() });
-      upsertBus('bus3', { number: 'BUS-103', route: 'R3', lat: 28.60, lng: 77.22, speed: 0, status: 'idle', ts: Date.now() });
+      animateMarker(exist.marker,[from.lat,from.lng],[to.lat,to.lng]);
+      updateListItem(id,to);
+    }
+  }
 
-      simInterval = setInterval(function(){
-        buses.forEach(function(v, id){
-          const jitter = (Math.random() - 0.5) * 0.0016;
-          const newLat = v.data.lat + (Math.random() * 0.002 - 0.001) + jitter;
-          const newLng = v.data.lng + (Math.random() * 0.002 - 0.001) + jitter;
-          const newSpeed = Math.max(0, (v.data.speed || 20) + (Math.random() * 6 - 3));
-          upsertBus(id, { lat: newLat, lng: newLng, speed: newSpeed, status: newSpeed < 1 ? 'idle' : 'running', ts: Date.now(), number: v.data.number, route: v.data.route });
+  function animateMarker(marker,from,to,duration=1000){
+    const start=performance.now();
+    function step(now){
+      const t=Math.min(1,(now-start)/duration);
+      const e = t<.5 ? 2*t*t : -1 + (4-2*t)*t;
+      marker.setLatLng([
+        from[0] + (to[0]-from[0])*e,
+        from[1] + (to[1]-from[1])*e
+      ]);
+      if(t<1) requestAnimationFrame(step);
+    }
+    requestAnimationFrame(step);
+  }
+
+  const listEl=document.getElementById('list');
+
+  function addListItem(id,data){
+    const el=document.createElement('div');
+    el.id='bus-'+id;
+    el.className='bus-card';
+    el.innerHTML=
+      `<div style="width:10px;height:10px;background:${statusColor(data.status)};border-radius:50%"></div>
+       <div class="bus-info">
+          <div>${escapeHtml(data.number||id)}</div>
+          <div class="bus-sub">${escapeHtml(data.route||'Route not set')}</div>
+        </div>
+       <div style="font-weight:700">${formatSpeed(data.speed)}</div>`;
+    el.onclick=()=>map.flyTo([data.lat,data.lng],15);
+    listEl.appendChild(el);
+  }
+
+  function updateListItem(id,data){
+    const el=document.getElementById('bus-'+id);
+    if(!el) return;
+    el.innerHTML=
+      `<div style="width:10px;height:10px;background:${statusColor(data.status)};border-radius:50%"></div>
+       <div class="bus-info">
+         <div>${escapeHtml(data.number||id)}</div>
+         <div class="bus-sub">${escapeHtml(data.route||'Route not set')}</div>
+       </div>
+       <div style="font-weight:700">${formatSpeed(data.speed)}</div>`;
+  }
+
+  function statusColor(s){
+    s=(s||"").toLowerCase();
+    if(s==="running") return "#10b981";
+    if(s==="idle") return "#f59e0b";
+    if(s==="delayed") return "#ef4444";
+    return "#9ca3af";
+  }
+
+  function formatSpeed(v){ return v==null ? '-' : Math.round(v)+' km/h'; }
+
+  function showDetails(id){
+    const d=buses.get(id).data;
+    alert(
+      `Bus ${d.number}\nRoute: ${d.route}\nSpeed: ${formatSpeed(d.speed)}\nLast Update: ${
+        new Date(d.ts||Date.now()).toLocaleString()
+      }`
+    );
+  }
+
+  document.getElementById("fitAll").onclick=function(){
+    const coords=[];
+    buses.forEach(v=>coords.push([v.data.lat,v.data.lng]));
+    if(coords.length===0) return;
+    map.fitBounds(L.latLngBounds(coords).pad(0.15));
+  };
+
+  let sim=null;
+
+  document.getElementById("simulate").onclick=function(){
+    if(sim){
+      clearInterval(sim);
+      sim=null;
+      this.innerText="Simulate";
+      return;
+    }
+
+    this.innerText="Stop Sim";
+
+    upsertBus('bus1',{number:'BUS-101',route:'R1',lat:28.6139,lng:77.2090,speed:32,status:'running',ts:Date.now()});
+    upsertBus('bus2',{number:'BUS-102',route:'R2',lat:28.62,lng:77.20,speed:28,status:'running',ts:Date.now()});
+    upsertBus('bus3',{number:'BUS-103',route:'R3',lat:28.60,lng:77.22,speed:0,status:'idle',ts:Date.now()});
+
+    sim=setInterval(()=>{
+      buses.forEach((v,id)=>{
+        const j=(Math.random()-0.5)*0.0016;
+        const newLat=v.data.lat+(Math.random()*0.002-0.001)+j;
+        const newLng=v.data.lng+(Math.random()*0.002-0.001)+j;
+        const newSpeed=Math.max(0,(v.data.speed||20)+(Math.random()*6-3));
+
+        upsertBus(id,{
+          lat:newLat,
+          lng:newLng,
+          speed:newSpeed,
+          status:newSpeed<1?'idle':'running',
+          ts:Date.now(),
+          number:v.data.number,
+          route:v.data.route
         });
-      }, 1600);
-    });
-  </script>
+      });
+    },1600);
+  };
+</script>
 </body>
 </html>
