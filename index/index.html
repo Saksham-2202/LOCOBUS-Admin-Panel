@@ -10,6 +10,7 @@
   <div class="layout">
     <aside class="sidebar">
       <div class="brand">LOCO BUS 🅱️</div>
+
       <nav class="menu">
         <a class="menu-item active" href="../index/index.html">Dashboard</a>
         <a class="menu-item" href="../live-map/live-map.html">Live Map</a>
@@ -22,24 +23,24 @@
       </nav>
 
       <div class="admin-profile">
-        <img src="admin img.png" class="admin-icon"/>
+        <img src="admin img.png" class="admin-icon" />
         <span id="adminName">ADMIN_33</span>
       </div>
     </aside>
 
     <main class="main">
+
       <header class="topbar">
         <h2>Dashboard</h2>
-        <img src="search_icon.png" class="search-img" /> 
-        <input type="text" class="search" placeholder="Search your destination" />
         <a class="menu-item logout-btn" href="#" id="logoutBtn">Logout</a>
       </header>
-      
+
+      <!-- Stats Row -->
       <section class="stats-row">
         <div class="stat-box">
           <h3>Active Fleet</h3>
           <p class="value">
-            <span id="activeBusCount">--</span> 
+            <span id="activeBusCount">--</span>
             <span>/</span>
             <span id="totalBusCount">--</span>
           </p>
@@ -66,8 +67,10 @@
           <p class="value"><span id="sosCount">0</span></p>
           <p class="label">Active Emergencies</p>
         </div>
+
       </section>
 
+      <!-- Pending & Alerts -->
       <section class="panel-row">
         <div class="panel">
           <div class="panel-header">
@@ -75,7 +78,7 @@
             <button>Check All</button>
           </div>
           <div class="list" id="pendingList">
-             <div class="list empty">Loading requests...</div>
+            <div class="list empty">Loading requests...</div>
           </div>
         </div>
 
@@ -88,34 +91,68 @@
         </div>
       </section>
 
-      <section class="panel tourist-panel">
-        <div class="panel-header">
-          <h3>Tourism & Engagement</h3>
-          <button>Check All</button>
-        </div>
-
-        <div class="tourist-list">
-          <h4>Trending Tourist Spot</h4>
-
-          <div class="spot">
-            Golden Temple, Amritsar <span>#1</span>
-            <img src="golden temple.jpeg" class="spot-img" />
+      
+        <aside class="card recent-card">
+          <div class="recent-header">
+            <h3>Recent Notifications</h3>
+            <div class="filter-tabs">
+              <button class="filter-tab active" data-filter="all">All</button>
+              <button class="filter-tab" data-filter="conductors">Conductors</button>
+              <button class="filter-tab" data-filter="users">Users</button>
+            </div>
           </div>
-
-          <div class="spot">
-            Wagah Border, Amritsar <span>#2</span>
-            <img src="wagah border.jpeg" class="spot-img" />
+          <div id="recentList" class="recent-list">
+            <div style="padding:20px; text-align:center; color:#999;">Loading notifications...</div>
           </div>
-
-          <div class="spot">
-            Moga, Punjab <span>#3</span>
-            <img src="moga.jpeg" class="spot-img" />
-          </div>
-        </div>
-      </section>
+        </aside>
+      </div>
     </main>
   </div>
 
+        <aside class="card recent-card">
+          <div class="recent-header">
+            <h3>Recent Notifications</h3>
+            <div class="filter-tabs">
+              <button class="filter-tab active" data-filter="all">All</button>
+              <button class="filter-tab" data-filter="conductors">Conductors</button>
+              <button class="filter-tab" data-filter="users">Users</button>
+            </div>
+          </div>
+          <div id="recentList" class="recent-list">
+            <div style="padding:20px; text-align:center; color:#999;">Loading notifications...</div>
+          </div>
+        </aside>
+      </div>
+    </main>
+  </div>
+
+  <div id="notifModalOverlay" class="notif-overlay" aria-hidden="true">
+    <div class="notif-modal" role="dialog" aria-labelledby="notifTitle">
+      <header class="nm-header">
+        <h3 id="notifTitle">Notification Details</h3>
+        <button id="notifClose" class="nm-close" aria-label="Close">✕</button>
+      </header>
+
+      <div class="nm-body">
+        <div class="nm-row"><div class="nm-label">Title</div><div id="nmTitle" class="nm-value"></div></div>
+        <div class="nm-row"><div class="nm-label">Message</div><div id="nmMessage" class="nm-value"></div></div>
+
+        <div class="nm-flex">
+          <div class="nm-col">
+            <div class="nm-label">Target Audience</div>
+            <div id="nmAudience" class="nm-value"></div>
+          </div>
+          <div class="nm-col">
+            <div class="nm-label">Status</div>
+            <div id="nmStatus" class="nm-value"></div>
+          </div>
+        </div>
+
+        <div class="nm-row"><div class="nm-label">Sent Date & Time</div><div id="nmDate" class="nm-value"></div></div>
+        <div class="nm-row"><div class="nm-label">Expires At</div><div id="nmExpiry" class="nm-value"></div></div>
+      </div>
+    </div>
+  </div>
   <script type="module" src="script.js"></script>
 </body>
 </html>

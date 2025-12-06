@@ -23,13 +23,22 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 
   // create a card element from data
-  function createBannerCard({ id, img, title, desc, link = '', date }) {
+  function createBannerCard({ id, img, title, desc, link = '', date, inactive = false }) {
     const card = document.createElement('article');
     card.className = 'banner-card';
+    if (inactive) card.classList.add('inactive');
     if (id) card.dataset.id = id;
 
+    const badgeHtml = inactive ? '<span class="badge inactive-badge">Inactive</span>' : '';
+    const toggleBtn = inactive 
+      ? '<button class="link-btn enable">Enable</button>'
+      : '<button class="link-btn disable">Disable</button>';
+
     card.innerHTML = `
-      <div class="banner-media"><img src="${escapeHtml(img)}" alt="${escapeHtml(title)}"></div>
+      <div class="banner-media">
+        <img src="${escapeHtml(img)}" alt="${escapeHtml(title)}">
+        ${badgeHtml}
+      </div>
       <div class="banner-body">
         <h3 class="title">${escapeHtml(title)}</h3>
         <p class="desc">${escapeHtml(desc)}</p>
@@ -38,7 +47,7 @@ document.addEventListener('DOMContentLoaded', () => {
       </div>
       <div class="banner-actions">
         <button class="link-btn edit">Edit</button>
-        <button class="link-btn disable">Disable</button>
+        ${toggleBtn}
         <button class="link-btn del">Delete</button>
       </div>
     `;
@@ -46,19 +55,67 @@ document.addEventListener('DOMContentLoaded', () => {
     return card;
   }
 
-  // attach handlers for edit/disable/delete on a card
+  // toggle active/inactive state
+  function toggleCardState(card) {
+    const isInactive = card.classList.contains('inactive');
+    const mediaDiv = card.querySelector('.banner-media');
+    const actionsDiv = card.querySelector('.banner-actions');
+    
+    if (isInactive) {
+      // Enable the card
+      card.classList.remove('inactive');
+      const badge = mediaDiv.querySelector('.inactive-badge');
+      if (badge) badge.remove();
+      
+      const enableBtn = actionsDiv.querySelector('.enable');
+      if (enableBtn) {
+        enableBtn.textContent = 'Disable';
+        enableBtn.classList.remove('enable');
+        enableBtn.classList.add('disable');
+      }
+    } else {
+      // Disable the card
+      card.classList.add('inactive');
+      
+      // Add inactive badge if it doesn't exist
+      if (!mediaDiv.querySelector('.inactive-badge')) {
+        const badge = document.createElement('span');
+        badge.className = 'badge inactive-badge';
+        badge.textContent = 'Inactive';
+        mediaDiv.appendChild(badge);
+      }
+      
+      const disableBtn = actionsDiv.querySelector('.disable');
+      if (disableBtn) {
+        disableBtn.textContent = 'Enable';
+        disableBtn.classList.remove('disable');
+        disableBtn.classList.add('enable');
+      }
+    }
+  }
+
+  // attach handlers for edit/disable/enable/delete on a card
   function attachCardHandlers(card) {
     if (!card) return;
     const edit = card.querySelector('.edit');
-    const disable = card.querySelector('.disable');
     const del = card.querySelector('.del');
 
     if (edit) edit.addEventListener('click', () => openEditModal(card));
-    if (disable) disable.addEventListener('click', () => {
-      card.classList.add('inactive');
-    });
     if (del) del.addEventListener('click', () => {
-      if (confirm('Delete this banner?')) card.remove();
+      if (confirm('Delete this banner?')) {
+        const img = card.querySelector('.banner-media img');
+        if (img && img.src && img.src.startsWith('blob:')) {
+          URL.revokeObjectURL(img.src);
+        }
+        card.remove();
+      }
+    });
+
+    // Use event delegation for disable/enable since button changes
+    card.querySelector('.banner-actions').addEventListener('click', (e) => {
+      if (e.target.classList.contains('disable') || e.target.classList.contains('enable')) {
+        toggleCardState(card);
+      }
     });
   }
 
@@ -101,7 +158,6 @@ document.addEventListener('DOMContentLoaded', () => {
       previewImg.style.display = 'none';
     }
 
-    // clear file input so we can detect new file selection
     bannerImageInput.value = '';
     uploadModal.style.display = 'flex';
   }
@@ -110,15 +166,40 @@ document.addEventListener('DOMContentLoaded', () => {
     uploadModal.style.display = 'none';
   }
 
+  // ---- search functionality ----
+  const searchInput = document.querySelector('.global-search');
+  
+  function filterBanners(searchTerm) {
+    const term = searchTerm.toLowerCase().trim();
+    const cards = bannersGrid.querySelectorAll('.banner-card');
+    
+    cards.forEach(card => {
+      const title = card.querySelector('.title')?.textContent.toLowerCase() || '';
+      const desc = card.querySelector('.desc')?.textContent.toLowerCase() || '';
+      const link = card.querySelector('.link')?.textContent.toLowerCase() || '';
+      
+      // Check if search term matches title, description, or link
+      if (title.includes(term) || desc.includes(term) || link.includes(term)) {
+        card.style.display = '';
+      } else {
+        card.style.display = 'none';
+      }
+    });
+  }
+  
+  if (searchInput) {
+    searchInput.addEventListener('input', (e) => {
+      filterBanners(e.target.value);
+    });
+  }
+
   // ---- event wiring ----
   uploadBtn.addEventListener('click', openUploadModal);
   if (modalCloseBtn) modalCloseBtn.addEventListener('click', closeModal);
   if (cancelBtn) cancelBtn.addEventListener('click', closeModal);
 
-  // choose image button -> open file picker
   chooseImgBtn.addEventListener('click', () => bannerImageInput.click());
 
-  // when file chosen -> show preview
   bannerImageInput.addEventListener('change', (e) => {
     const file = e.target.files[0];
     if (!file) return;
@@ -135,10 +216,8 @@ document.addEventListener('DOMContentLoaded', () => {
     const file = bannerImageInput.files[0];
 
     if (!title) { alert('Please enter a title.'); return; }
-    // When creating new banner, require image. When editing, image optional.
     if (!isEditing && !file) { alert('Please choose an image.'); return; }
 
-    // helper to update card DOM
     function updateCardDOM(card, imgURL) {
       if (imgURL) {
         let img = card.querySelector('.banner-media img');
@@ -149,6 +228,7 @@ document.addEventListener('DOMContentLoaded', () => {
           card.insertBefore(media, card.firstChild);
         } else {
           img.src = imgURL;
+          img.alt = title;
         }
       }
 
@@ -174,27 +254,25 @@ document.addEventListener('DOMContentLoaded', () => {
       if (metaEl) metaEl.textContent = `Created: ${new Date().toISOString().slice(0,10)}`;
     }
 
-    // If a new file is selected, use it (preview URL). Otherwise preserve existing image.
     if (file) {
       const imgURL = URL.createObjectURL(file);
       if (isEditing && editingCard) {
         updateCardDOM(editingCard, imgURL);
         closeModal();
       } else {
-        // create new card
         const card = createBannerCard({
           id: 'new',
           img: imgURL,
           title,
           desc,
           link: url,
-          date: new Date().toISOString().slice(0,10)
+          date: new Date().toISOString().slice(0,10),
+          inactive: false
         });
         bannersGrid.prepend(card);
         closeModal();
       }
     } else {
-      // no new file selected
       if (isEditing && editingCard) {
         updateCardDOM(editingCard, null);
         closeModal();
@@ -204,7 +282,6 @@ document.addEventListener('DOMContentLoaded', () => {
       }
     }
 
-    // reset form & state
     document.getElementById('bannerTitle').value = '';
     document.getElementById('bannerDesc').value = '';
     document.getElementById('bannerURL').value = '';
@@ -213,16 +290,5 @@ document.addEventListener('DOMContentLoaded', () => {
     previewImg.style.display = 'none';
     isEditing = false;
     editingCard = null;
-  });
-
-  // Prevent memory leaks: revoke object URLs when card images are removed (optional improvement)
-  bannersGrid.addEventListener('click', (e) => {
-    const del = e.target.closest('.del');
-    if (!del) return;
-    const card = del.closest('.banner-card');
-    const img = card?.querySelector('.banner-media img');
-    if (img && img.src && img.src.startsWith('blob:')) {
-      URL.revokeObjectURL(img.src);
-    }
   });
 });
