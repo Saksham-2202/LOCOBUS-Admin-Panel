@@ -1,195 +1,319 @@
-// help-desk.js - minimal logic: search, filter, modal details
+// complaints.js - Complaints Management System
 
-document.addEventListener('DOMContentLoaded', () => {
-  const tbody = document.getElementById('complaintsBody');
-  const rows = Array.from(tbody.querySelectorAll('.complaint-row'));
-  const countEl = document.getElementById('count');
-  const shownCount = document.getElementById('shownCount');
-  const totalCount = document.getElementById('totalCount');
+import { initializeApp } from "https://www.gstatic.com/firebasejs/9.23.0/firebase-app.js";
+import { 
+  getFirestore,
+  collection,
+  onSnapshot,
+  doc,
+  updateDoc,
+  query,
+  orderBy,
+  Timestamp
+} from "https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore.js";
 
-  // filters & search
-  const searchInput = document.querySelector('.search-complaints');
-  const statusFilter = document.querySelector('.status-filter');
-  const priorityFilter = document.querySelector('.priority-filter');
-  const categoryFilter = document.querySelector('.category-filter');
-  const sourceFilter = document.querySelector('.source-filter');
+// Firebase Configuration
+const firebaseConfig = {
+  apiKey: "AIzaSyCRtx7Oyda48Hz0eu-BiNrGYiK3_36Vl-c",
+  authDomain: "locobus-e4274.firebaseapp.com",
+  databaseURL: "https://locobus-e4274-default-rtdb.asia-southeast1.firebasedatabase.app",
+  projectId: "locobus-e4274",
+  storageBucket: "locobus-e4274.firebasestorage.app",
+  messagingSenderId: "296482389648",
+  appId: "1:296482389648:web:1827bd92dc55c8a857e215"
+};
 
-  function updateCounts(visibleRows) {
-    const n = visibleRows.length;
-    if (countEl) countEl.textContent = n;
-    if (shownCount) shownCount.textContent = Math.min(n, rows.length);
-    if (totalCount) totalCount.textContent = rows.length;
-  }
+// Initialize Firebase
+const app = initializeApp(firebaseConfig);
+const db = getFirestore(app);
 
-  function matchesFilters(row) {
-    const q = (searchInput.value || '').trim().toLowerCase();
-    const status = (statusFilter.value || 'all');
-    const pr = (priorityFilter.value || 'all');
-    const cat = (categoryFilter.value || 'all');
-    const src = (sourceFilter.value || 'all');
+// State
+let allComplaints = [];
+let currentComplaintId = null;
 
-    // text search across row text
-    const text = row.innerText.toLowerCase();
-    if (q && !text.includes(q)) return false;
-
-    // dataset filters (status/priority/source)
-    if (status !== 'all' && row.dataset.status !== status) return false;
-    if (pr !== 'all' && row.dataset.priority !== pr) return false;
-    if (src !== 'all' && row.dataset.source !== src) return false;
-
-    // category: check text content of category cell
-    if (cat !== 'all') {
-      const catCell = row.querySelector('td:nth-child(4)');
-      if (!catCell || !catCell.innerText.toLowerCase().includes(cat.toLowerCase())) return false;
-    }
-    return true;
-  }
-
-  function applyFilters() {
-    const visible = [];
-    rows.forEach(r => {
-      if (matchesFilters(r)) {
-        r.style.display = '';
-        visible.push(r);
-      } else {
-        r.style.display = 'none';
-      }
-    });
-    updateCounts(visible);
-  }
-
-  // attach filter/search listeners
-  [searchInput, statusFilter, priorityFilter, categoryFilter, sourceFilter].forEach(el => {
-    if (!el) return;
-    el.addEventListener('input', applyFilters);
-    el.addEventListener('change', applyFilters);
-  });
-
-  // initial counts
-  updateCounts(rows);
-
-  /* --------------------- details modal --------------------- */
-
+// DOM Elements
+const tbody = document.getElementById('complaintsBody');
+const countEl = document.getElementById('complaintCount');
+const searchInput = document.getElementById('searchInput');
+const statusFilter = document.getElementById('statusFilter');
+const priorityFilter = document.getElementById('priorityFilter');
+const categoryFilter = document.getElementById('categoryFilter');
 const detailPanel = document.getElementById('detailPanel');
-const detailCloseBtn = document.getElementById('detailClose');
-const detailIdEl = document.getElementById('detailId');
-const detailDateEl = document.getElementById('detailDate');
-const detailSourceEl = document.getElementById('detailSource');
-const detailCategoryEl = document.getElementById('detailCategory');
-const detailRouteEl = document.getElementById('detailRoute');
-const detailEmailEl = document.getElementById('detailEmail');
-const detailTextEl = document.getElementById('detailText');
-const dpStatusBadge = document.getElementById('dpStatusBadge');
-const dpPriorityBadge = document.getElementById('dpPriorityBadge');
-const activityListEl = document.getElementById('activityList');
-const replyText = document.getElementById('replyText');
-const sendReplyBtn = document.getElementById('sendReply');
-const changeStatusSel = document.getElementById('changeStatus');
-const updateStatusBtn = document.getElementById('updateStatus');
-const markSolvedBtn = document.getElementById('markSolved');
+const closePanel = document.getElementById('closePanel');
+const alertBanner = document.getElementById('alertBanner');
+const alertList = document.getElementById('alertList');
 
-// open detail panel and populate fields from row
-function openDetailPanel(row) {
-  const id = row.dataset.id || row.querySelector('.cid')?.innerText || '—';
-  const date = row.children[1].innerText;
-  const srcText = row.children[2].innerText.trim();
-  const category = row.children[3].innerText;
-  const route = row.children[4].innerText;
-  const priority = row.dataset.priority || 'low';
-  const status = row.dataset.status || 'open';
-
-  // populate UI
-  detailIdEl.textContent = `Complaint ${id}`;
-  detailDateEl.textContent = date;
-  detailSourceEl.innerHTML = srcText; // includes name + small label
-  detailCategoryEl.textContent = category;
-  detailRouteEl.textContent = route;
-  // email placeholder - if you have email in dataset use it:
-  detailEmailEl.textContent = row.dataset.email || '';
-
-  detailTextEl.textContent = row.dataset.description || 'No detailed description available.';
-
-  // badges
-  dpStatusBadge.className = 'status-pill';
-  if (status === 'open') { dpStatusBadge.classList.add('status-open'); dpStatusBadge.textContent = 'Open'; }
-  else if (status === 'pending') { dpStatusBadge.classList.add('status-pending'); dpStatusBadge.textContent = 'Pending'; }
-  else { dpStatusBadge.classList.add('status-solved'); dpStatusBadge.textContent = 'Solved'; }
-
-  dpPriorityBadge.className = 'priority-pill';
-  if (priority === 'high') { dpPriorityBadge.classList.add('badge-high'); dpPriorityBadge.textContent = 'High Priority'; }
-  else if (priority === 'medium') { dpPriorityBadge.classList.add('badge-medium'); dpPriorityBadge.textContent = 'Medium Priority'; }
-  else { dpPriorityBadge.classList.add('badge-low'); dpPriorityBadge.textContent = 'Low Priority'; }
-
-  // activity list - if your row has activity data use it otherwise default examples
-  activityListEl.innerHTML = '';
-  const activities = JSON.parse(row.dataset.activity || '["Complaint submitted • 2023-10-27 14:32","Assigned to Admin Team • 2023-10-27 15:00"]');
-  activities.forEach((act, i) => {
-    const li = document.createElement('li');
-    const dot = document.createElement('span');
-    dot.className = 'dot ' + (i === 0 ? 'blue' : 'green');
-    li.appendChild(dot);
-    const txt = document.createElement('span');
-    txt.innerHTML = act;
-    li.appendChild(txt);
-    activityListEl.appendChild(li);
-  });
-
-  // set select to current status
-  changeStatusSel.value = status;
-
-  // show panel
-  detailPanel.style.display = 'block';
-  detailPanel.setAttribute('aria-hidden', 'false');
+// Check Authentication
+function checkAuth() {
+  const adminProfile = sessionStorage.getItem('adminProfile');
+  if (!adminProfile) {
+    window.location.href = "../login/login.html";
+    return null;
+  }
+  
+  try {
+    const profile = JSON.parse(adminProfile);
+    const adminProfileEl = document.getElementById('adminProfile');
+    if (adminProfileEl && profile.adminId) {
+      const nameSpan = adminProfileEl.querySelector('span') || adminProfileEl;
+      nameSpan.textContent = profile.adminId.toUpperCase();
+    }
+    return profile;
+  } catch (err) {
+    console.error('Error parsing admin profile:', err);
+    window.location.href = "../login/login.html";
+    return null;
+  }
 }
 
-// close
-detailCloseBtn.addEventListener('click', () => {
-  detailPanel.style.display = 'none';
-  detailPanel.setAttribute('aria-hidden', 'true');
+// Calculate active (unsolved) complaints per bus
+function calculateActiveComplaintsByBus() {
+  const busStats = {};
+  
+  // Only count complaints that are NOT solved
+  allComplaints.forEach(complaint => {
+    if (complaint.status !== 'solved') {
+      const bus = complaint.busNumber;
+      busStats[bus] = (busStats[bus] || 0) + 1;
+    }
+  });
+  
+  return busStats;
+}
+
+// Initialize Complaints Listener
+function initComplaintsListener() {
+  const complaintsQuery = query(
+    collection(db, 'complaints'),
+    orderBy('createdAt', 'desc')
+  );
+
+  onSnapshot(complaintsQuery, (snapshot) => {
+    allComplaints = [];
+    snapshot.forEach((doc) => {
+      allComplaints.push({ id: doc.id, ...doc.data() });
+    });
+    renderComplaints();
+    updateAlertBanner();
+  }, (error) => {
+    console.error('Error listening to complaints:', error);
+    tbody.innerHTML = '<tr><td colspan="8" style="text-align:center;padding:40px;color:#f87171;">Error loading complaints</td></tr>';
+  });
+}
+
+// Update Alert Banner for High Complaint Buses
+function updateAlertBanner() {
+  const busComplaintStats = calculateActiveComplaintsByBus();
+  
+  const highComplaintBuses = Object.entries(busComplaintStats)
+    .filter(([_, count]) => count >= 5)
+    .sort((a, b) => b[1] - a[1]);
+
+  if (highComplaintBuses.length > 0) {
+    alertBanner.classList.add('show');
+    alertList.innerHTML = highComplaintBuses
+      .map(([bus, count]) => `
+        <li>
+          <span class="alert-bus-number">${bus}</span>
+          <span class="alert-count">${count} active complaints</span>
+        </li>
+      `)
+      .join('');
+  } else {
+    alertBanner.classList.remove('show');
+  }
+}
+
+// Filter Matching
+function matchesFilters(complaint) {
+  const search = searchInput.value.toLowerCase().trim();
+  const status = statusFilter.value;
+  const priority = priorityFilter.value;
+  const category = categoryFilter.value;
+
+  if (search) {
+    const searchText = `${complaint.busNumber} ${complaint.issueCategory} ${complaint.description}`.toLowerCase();
+    if (!searchText.includes(search)) return false;
+  }
+
+  if (status !== 'all' && complaint.status !== status) return false;
+  if (priority !== 'all' && complaint.priority !== priority) return false;
+  if (category !== 'all' && complaint.issueCategory !== category) return false;
+
+  return true;
+}
+
+// Render Complaints Table
+function renderComplaints() {
+  const filtered = allComplaints.filter(matchesFilters);
+  countEl.textContent = filtered.length;
+
+  if (filtered.length === 0) {
+    tbody.innerHTML = '<tr><td colspan="8" style="text-align:center;padding:40px;color:#999;">No complaints found</td></tr>';
+    return;
+  }
+
+  // Calculate active complaints per bus for warning indicator
+  const busComplaintStats = calculateActiveComplaintsByBus();
+
+  tbody.innerHTML = filtered.map(c => {
+    const date = c.createdAt 
+      ? new Date(c.createdAt.toDate()).toLocaleString('en-IN', {
+          year: 'numeric',
+          month: 'short',
+          day: 'numeric',
+          hour: '2-digit',
+          minute: '2-digit'
+        })
+      : '-';
+    
+    const route = `${c.from || '-'} → ${c.to || '-'}`;
+    
+    // Check if this bus has 5+ ACTIVE (unsolved) complaints
+    const isHighComplaint = busComplaintStats[c.busNumber] >= 5;
+    const shortId = c.id.substr(0, 8).toUpperCase();
+
+    return `
+      <tr class="complaint-row ${isHighComplaint ? 'high-complaint-bus' : ''}" data-id="${c.id}">
+        <td><span style="font-family:monospace;font-size:12px;">#${shortId}</span></td>
+        <td>${date}</td>
+        <td>
+          <div class="bus-badge">
+            ${isHighComplaint ? '<span class="warning-icon">⚠️</span>' : ''}
+            <strong>${c.busNumber}</strong>
+          </div>
+        </td>
+        <td>${route}</td>
+        <td>${c.issueCategory}</td>
+        <td><span class="priority priority-${c.priority}">${c.priority}</span></td>
+        <td><span class="status status-${c.status}">${c.status}</span></td>
+        <td class="action-col">
+          <button class="view-btn" onclick="window.openComplaintDetail('${c.id}')" title="View Details">👁</button>
+        </td>
+      </tr>
+    `;
+  }).join('');
+}
+
+// Open Complaint Detail Panel
+window.openComplaintDetail = (id) => {
+  const complaint = allComplaints.find(c => c.id === id);
+  if (!complaint) return;
+
+  currentComplaintId = id;
+  
+  const shortId = id.substr(0, 8).toUpperCase();
+  document.getElementById('detailId').textContent = `Complaint #${shortId}`;
+  document.getElementById('detailBusNumber').textContent = complaint.busNumber;
+  document.getElementById('detailRoute').textContent = `${complaint.from || '-'} → ${complaint.to || '-'}`;
+  document.getElementById('detailCategory').textContent = complaint.issueCategory;
+  
+  const incidentDate = complaint.incidentAt 
+    ? new Date(complaint.incidentAt.toDate()).toLocaleString('en-IN', {
+        year: 'numeric',
+        month: 'long',
+        day: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit'
+      })
+    : 'Not specified';
+  document.getElementById('detailDate').textContent = incidentDate;
+  
+  const reporter = complaint.isAnonymous 
+    ? 'Anonymous User' 
+    : (complaint.userEmail || 'User');
+  document.getElementById('detailReporter').textContent = reporter;
+  
+  document.getElementById('detailDescription').textContent = complaint.description || 'No description provided';
+  document.getElementById('adminNotesInput').value = complaint.adminNotes || '';
+
+  const statusBadge = document.getElementById('detailStatus');
+  statusBadge.className = `status status-${complaint.status}`;
+  statusBadge.textContent = complaint.status;
+
+  const priorityBadge = document.getElementById('detailPriority');
+  priorityBadge.className = `priority priority-${complaint.priority}`;
+  priorityBadge.textContent = complaint.priority;
+
+  document.getElementById('statusSelect').value = complaint.status;
+
+  detailPanel.classList.add('show');
+};
+
+// Close Detail Panel
+closePanel.addEventListener('click', () => {
+  detailPanel.classList.remove('show');
 });
 
-// clicking any complaint row opens panel (reuse earlier event binding)
-tbody.addEventListener('click', (ev) => {
-  const row = ev.target.closest('.complaint-row');
-  if (!row) return;
-  openDetailPanel(row);
-});
+// Update Complaint Status
+document.getElementById('updateBtn').addEventListener('click', async () => {
+  if (!currentComplaintId) return;
+  
+  const newStatus = document.getElementById('statusSelect').value;
+  const adminNotes = document.getElementById('adminNotesInput').value.trim();
 
-// send reply (placeholder)
-sendReplyBtn.addEventListener('click', () => {
-  const txt = replyText.value.trim();
-  if (!txt) return alert('Type a reply first.');
-  // TODO: send reply to backend
-  alert('Reply sent (demo): ' + txt);
-  replyText.value = '';
-});
+  try {
+    const updateData = {
+      status: newStatus,
+      adminNotes: adminNotes,
+      updatedAt: Timestamp.now()
+    };
 
-// update status placeholder
-updateStatusBtn.addEventListener('click', () => {
-  const newStatus = changeStatusSel.value;
-  // TODO: update backend
-  alert('Status updated to: ' + newStatus);
-  detailPanel.style.display = 'none';
-});
+    // If marking as solved, add resolved flag and timestamp
+    if (newStatus === 'solved') {
+      updateData.resolved = true;
+      updateData.resolvedAt = Timestamp.now();
+    }
 
-// mark as solved
-markSolvedBtn.addEventListener('click', () => {
-  // TODO: update backend and UI
-  alert('Marked as solved (demo).');
-  detailPanel.style.display = 'none';
-});
-
-// close on ESC
-document.addEventListener('keydown', (e) => {
-  if (e.key === 'Escape' && detailPanel.style.display === 'block') {
-    detailPanel.style.display = 'none';
+    await updateDoc(doc(db, 'complaints', currentComplaintId), updateData);
+    alert('✅ Complaint updated successfully');
+  } catch (err) {
+    console.error('Error updating complaint:', err);
+    alert('❌ Error updating complaint: ' + err.message);
   }
 });
 
+// Mark Complaint as Solved
+document.getElementById('solveBtn').addEventListener('click', async () => {
+  if (!currentComplaintId) return;
 
-  // small pager (non-functional demo)
-  const prevPage = document.getElementById('prevPage');
-  const nextPage = document.getElementById('nextPage');
-  if (prevPage) prevPage.addEventListener('click', () => alert('Previous page (implement server-side pagination)'));
-  if (nextPage) nextPage.addEventListener('click', () => alert('Next page (implement server-side pagination)'));
+  const adminNotes = document.getElementById('adminNotesInput').value.trim();
+
+  if (!confirm('Mark this complaint as solved?')) return;
+
+  try {
+    await updateDoc(doc(db, 'complaints', currentComplaintId), {
+      status: 'solved',
+      resolved: true,
+      adminNotes: adminNotes,
+      resolvedAt: Timestamp.now(),
+      updatedAt: Timestamp.now()
+    });
+    detailPanel.classList.remove('show');
+    alert('✅ Complaint marked as solved');
+  } catch (err) {
+    console.error('Error marking as solved:', err);
+    alert('❌ Error: ' + err.message);
+  }
+});
+
+// Filter Event Listeners
+[searchInput, statusFilter, priorityFilter, categoryFilter].forEach(el => {
+  el.addEventListener('input', renderComplaints);
+  el.addEventListener('change', renderComplaints);
+});
+
+// ESC Key to Close Panel
+document.addEventListener('keydown', (e) => {
+  if (e.key === 'Escape' && detailPanel.classList.contains('show')) {
+    detailPanel.classList.remove('show');
+  }
+});
+
+// Initialize
+document.addEventListener('DOMContentLoaded', () => {
+  const admin = checkAuth();
+  if (!admin) return;
+  
+  initComplaintsListener();
 });

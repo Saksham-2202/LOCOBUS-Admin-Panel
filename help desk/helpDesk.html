@@ -3,253 +3,179 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>Bus Sathi | Help Desk - Complaints</title>
-  <link rel="stylesheet" href="./helpDesk.css" />
+  <title>Bus Sathi | Complaints Management</title>
+  <link rel="stylesheet" href="helpDesk.css" />
 </head>
 <body>
   <div class="layout">
-
-    <!-- Sidebar (same style as other pages) -->
-   <aside class="sidebar">
+    <aside class="sidebar">
       <div class="brand">LOCO BUS 🅱️</div>
       <nav class="menu">
-  <a class="menu-item" href="../index/index.html">Dashboard</a>
-  <a class="menu-item" href="../live-map/live-map.html">Live Map</a>
-  <a class="menu-item" href="../fleet/fleet.html">Fleet Management</a>
-  <a class="menu-item" href="../broadCasts/broadCasts.html">Broadcasts</a>
-  <a class="menu-item" href="../notifications/notifications.html">Notifications</a>
-  <a class="menu-item " href="../index/createBus.html">Account Panel</a>
-  <a class="menu-item active" href="../help desk/helpDesk.html">Help Desk</a>
-  <a class="menu-item" href="../settings/settings.html">Settings</a>
-
-</nav>
-
-      <!-- UPDATED: Admin image added -->
-      <div class="admin-profile">
-        <img src="admin img.png" class="admin-icon" />
+        <a class="menu-item" href="../index/index.html">Dashboard</a>
+        <a class="menu-item" href="../live-map/live-map.html">Live Map</a>
+        <a class="menu-item" href="../fleet/fleet.html">Fleet Management</a>
+        <a class="menu-item" href="../broadCasts/broadCasts.html">Broadcasts</a>
+        <a class="menu-item" href="../notifications/notifications.html">Notifications</a>
+        <a class="menu-item" href="../index/createBus.html">Account Panel</a>
+        <a class="menu-item active" href="#">Complaints</a>
+        <a class="menu-item" href="../settings/settings.html">Settings</a>
+      </nav>
+      <div class="admin-profile" id="adminProfile">
+        <img src="../help desk/admin img.png" class="admin-icon" />
         ADMIN_33
       </div>
     </aside>
-    <!-- Main area -->
+
     <main class="main">
-      <!-- header -->
       <header class="main-header">
         <div>
-          <h1>Help Desk - Complaints Management</h1>
-          <p class="muted">Manage and resolve user and conductor complaints efficiently</p>
-        </div>
-
-        <div class="header-actions">
-          <input class="global-search" placeholder="Search buses, conductors..." />
-          <button class="icon-btn">🔔<span class="badge">3</span></button>
-          <div class="profile-pill">Admin User ▾</div>
+          <h1>Complaints Management</h1>
+          <p class="muted">Monitor and resolve user complaints</p>
         </div>
       </header>
 
-      <!-- filters card -->
-      <section class="filters-card">
-        <input class="search-complaints" placeholder="Search complaints..." />
+      <!-- Alert Banner for High Complaint Buses -->
+      <div id="alertBanner" class="alert-banner">
+        <h3>
+          <span>⚠️</span>
+          <span>High Priority Buses (5+ Complaints)</span>
+        </h3>
+        <ul id="alertList" class="alert-list"></ul>
+      </div>
 
+      <!-- Filters -->
+      <section class="filters-card">
+        <input id="searchInput" class="search-complaints" placeholder="Search by bus number, category..." />
         <div class="filters-row">
           <label>
             Status
-            <select class="filter status-filter">
+            <select id="statusFilter" class="filter">
               <option value="all">All</option>
               <option value="open">Open</option>
               <option value="pending">Pending</option>
               <option value="solved">Solved</option>
             </select>
           </label>
-
           <label>
             Priority
-            <select class="filter priority-filter">
+            <select id="priorityFilter" class="filter">
               <option value="all">All</option>
               <option value="high">High</option>
               <option value="medium">Medium</option>
               <option value="low">Low</option>
             </select>
           </label>
-
           <label>
             Category
-            <select class="filter category-filter">
-              <option value="all">All</option>
-              <option value="late">Late Arrival</option>
-              <option value="rude">Rude Behavior</option>
-              <option value="ac">AC Issue</option>
-              <option value="breakdown">Breakdown</option>
-            </select>
-          </label>
-
-          <label>
-            Source
-            <select class="filter source-filter">
-              <option value="all">All</option>
-              <option value="user">User</option>
-              <option value="conductor">Conductor</option>
+            <select id="categoryFilter" class="filter">
+              <option value="all">All Categories</option>
+              <option value="Driver behaviour">Driver behaviour</option>
+              <option value="Overcrowding">Overcrowding</option>
+              <option value="Route issue / Wrong stop">Route issue</option>
+              <option value="Delay / Late">Delay / Late</option>
+              <option value="Safety / Accident">Safety / Accident</option>
+              <option value="Cleanliness">Cleanliness</option>
+              <option value="Other">Other</option>
             </select>
           </label>
         </div>
       </section>
 
-      <!-- complaints table -->
+      <!-- Complaints Table -->
       <section class="table-card">
         <div class="table-head">
-          <h3>Complaints <span class="muted">(<span id="count">4</span>)</span></h3>
-          <div class="hint">Click on any row to view details</div>
+          <h3>Complaints <span class="muted">(<span id="complaintCount">0</span>)</span></h3>
         </div>
-
         <div class="table-wrap">
           <table class="complaints-table">
             <thead>
               <tr>
-                <th>COMPLAINT ID</th>
-                <th>DATE / TIME</th>
-                <th>SOURCE</th>
+                <th>ID</th>
+                <th>DATE/TIME</th>
+                <th>BUS NUMBER</th>
+                <th>ROUTE</th>
                 <th>CATEGORY</th>
-                <th>BUS / ROUTE</th>
-                
+                <th>PRIORITY</th>
                 <th>STATUS</th>
                 <th>ACTION</th>
               </tr>
             </thead>
             <tbody id="complaintsBody">
-              <!-- sample rows (JS will render real rows if you connect DB) -->
-              <tr class="complaint-row" data-id="LBC00123" data-source="user" data-priority="high" data-status="open">
-                <td class="cid">#LBC00123</td>
-                <td>2023-10-27 14:30</td>
-                <td>
-                  <div class="src"><span class="src-icon">👤</span> Rajesh Kumar <span class="muted small">User</span></div>
-                </td>
-                <td>Late Arrival</td>
-                <td>Bus PB-02-1234, Route Jalandhar</td>
-                
-                <td><span class="status status-open">Open</span></td>
-                <td class="action-col">
-                  <button class="view-btn" aria-label="View">👁</button>
-                </td>
-              </tr>
-
-              <tr class="complaint-row" data-id="LBC00124" data-source="conductor" data-priority="medium" data-status="pending">
-                <td class="cid">#LBC00124</td>
-                <td>2023-10-27 12:15</td>
-                <td>
-                  <div class="src"><span class="src-icon">👨‍✈️</span> Preet Singh <span class="muted small">Conductor</span></div>
-                </td>
-                <td>Rude Behavior</td>
-                <td>Bus PB-02-5678, Route Amritsar</td>
-                
-                <td><span class="status status-pending">Pending</span></td>
-                <td class="action-col"><button class="view-btn">👁</button></td>
-              </tr>
-
-              <tr class="complaint-row" data-id="LBC00125" data-source="user" data-priority="low" data-status="solved">
-                <td class="cid">#LBC00125</td>
-                <td>2023-10-27 10:45</td>
-                <td>
-                  <div class="src"><span class="src-icon">👤</span> Simran Kaur <span class="muted small">User</span></div>
-                </td>
-                <td>AC Issue</td>
-                <td>Bus PB-02-9999, Route Chandigarh</td>
-                
-                <td><span class="status status-solved">Solved</span></td>
-                <td class="action-col"><button class="view-btn">👁</button></td>
-              </tr>
-
-              <tr class="complaint-row" data-id="LBC00126" data-source="user" data-priority="high" data-status="open">
-                <td class="cid">#LBC00126</td>
-                <td>2023-10-27 09:20</td>
-                <td>
-                  <div class="src"><span class="src-icon">👤</span> Manpreet Gill <span class="muted small">User</span></div>
-                </td>
-                <td>Breakdown</td>
-                <td>Bus PB-02-3333, Route Ludhiana</td>
-                
-                <td><span class="status status-open">Open</span></td>
-                <td class="action-col"><button class="view-btn">👁</button></td>
+              <tr>
+                <td colspan="8" class="loading">Loading complaints...</td>
               </tr>
             </tbody>
           </table>
-        </div>
-
-        <div class="table-footer">
-          <div class="left">Showing 1 to <span id="shownCount">4</span> of <span id="totalCount">4</span> results</div>
-          <div class="pager">
-            <button class="pg-btn" id="prevPage" disabled>Previous</button>
-            <button class="pg-btn" id="nextPage">Next</button>
-          </div>
         </div>
       </section>
     </main>
   </div>
 
-  <!-- Complaint Detail Panel (right-side, sticky) -->
-<div id="detailPanel" class="detail-panel" aria-hidden="true" role="dialog" aria-label="Complaint details">
-  <div class="detail-panel-card">
-    <header class="dp-header">
-      <div>
-        <h3 id="detailId">Complaint #LBC00123</h3>
-        <div class="dp-badges">
-          <span id="dpStatusBadge" class="status-pill status-open">Open</span>
-          <span id="dpPriorityBadge" class="priority-pill badge-high">High Priority</span>
+  <!-- Detail Panel -->
+  <div id="detailPanel" class="detail-panel">
+    <div class="detail-panel-card">
+      <header class="dp-header">
+        <div>
+          <h3 id="detailId">Complaint Details</h3>
+          <div class="dp-badges">
+            <span id="detailStatus" class="status status-open">Open</span>
+            <span id="detailPriority" class="priority priority-medium">Medium</span>
+          </div>
         </div>
-      </div>
-      <button id="detailClose" class="dp-close" aria-label="Close">✕</button>
-    </header>
+        <button id="closePanel" class="dp-close">✕</button>
+      </header>
 
-    <div class="dp-section dp-details">
-      <h4 class="section-title">Complaint Details</h4>
-      <ul class="dp-list">
-        <li><strong>Reporter</strong><div id="detailSource">Rajesh Kumar<br/><span class="muted">Reported via User App</span></div></li>
-        <li><strong>Date / Time</strong><div id="detailDate">2023-10-27 14:30</div></li>
-        <li><strong>Category</strong><div id="detailCategory">Late Arrival</div></li>
-        <li><strong>Bus / Route</strong><div id="detailRoute">Bus PB-02-1234, Route Jalandhar</div></li>
-        <li><strong>Email</strong><div id="detailEmail">rajesh.kumar@email.com</div></li>
-      </ul>
-    </div>
-
-    <div class="dp-section">
-      <h4 class="section-title">Description</h4>
-      <div id="detailText" class="dp-note">
-        The bus was 45 minutes late from the scheduled arrival time. This caused me to miss my important meeting. Please look into this matter urgently.
-      </div>
-    </div>
-
-    <div class="dp-section">
-      <h4 class="section-title">Activity History</h4>
-      <ul id="activityList" class="activity-list">
-        <li><span class="dot blue"></span> Complaint submitted <div class="muted small">2023-10-27 14:32 • by System</div></li>
-        <li><span class="dot green"></span> Assigned to Admin Team <div class="muted small">2023-10-27 15:00 • by Auto-assign</div></li>
-      </ul>
-    </div>
-
-    <div class="dp-section">
-      <h4 class="section-title">Send Reply</h4>
-      <div class="reply-row">
-        <textarea id="replyText" placeholder="Type your response to the complainant..."></textarea>
-        <button id="sendReply" class="icon-send" title="Send">➤</button>
-      </div>
-    </div>
-
-    <div class="dp-section dp-controls">
-      <label class="small">Change Status</label>
-      <div class="status-row">
-        <select id="changeStatus">
-          <option value="open">Open</option>
-          <option value="pending">Pending</option>
-          <option value="solved">Solved</option>
-        </select>
-        <button id="updateStatus" class="btn-update">Update</button>
+      <div class="dp-section">
+        <h4 class="section-title">Details</h4>
+        <ul class="dp-list">
+          <li>
+            <strong>Bus Number</strong>
+            <div class="value" id="detailBusNumber">-</div>
+          </li>
+          <li>
+            <strong>Route</strong>
+            <div class="value" id="detailRoute">-</div>
+          </li>
+          <li>
+            <strong>Category</strong>
+            <div class="value" id="detailCategory">-</div>
+          </li>
+          <li>
+            <strong>Date/Time</strong>
+            <div class="value" id="detailDate">-</div>
+          </li>
+          <li>
+            <strong>Reporter</strong>
+            <div class="value" id="detailReporter">-</div>
+          </li>
+        </ul>
       </div>
 
-      <button id="markSolved" class="btn-solve">✔ Mark as Solved</button>
+      <div class="dp-section">
+        <h4 class="section-title">Description</h4>
+        <div id="detailDescription" class="dp-note">-</div>
+      </div>
+
+      <div class="dp-section">
+        <h4 class="section-title">Admin Notes</h4>
+        <textarea id="adminNotesInput" class="admin-notes-input" placeholder="Add internal notes about this complaint..."></textarea>
+      </div>
+
+      <div class="dp-section dp-controls">
+        <label class="small" style="font-weight: 600; margin-bottom: 4px;">Update Status</label>
+        <div class="status-row">
+          <select id="statusSelect">
+            <option value="open">Open</option>
+            <option value="pending">Pending</option>
+            <option value="solved">Solved</option>
+          </select>
+          <button id="updateBtn" class="btn-update">Update</button>
+        </div>
+        <button id="solveBtn" class="btn-solve">✓ Mark as Solved</button>
+      </div>
     </div>
   </div>
-</div>
-<!-- end detail panel -->
 
-
-  <script src="helpDesk.js"></script>
+  <script type="module" src="helpDesk.js"></script>
 </body>
 </html>
