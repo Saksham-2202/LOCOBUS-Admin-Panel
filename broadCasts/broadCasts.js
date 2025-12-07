@@ -1,11 +1,5 @@
-// broadCasts.js - Fixed version without ES6 modules
+// broadCasts.js - Complete version with Search functionality
 // Make sure to add Firebase SDK scripts to your HTML first
-
-// ⚠️ IMPORTANT: Add these scripts to your HTML <head> section:
-/*
-<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
-*/
 
 // Firebase Configuration
 const firebaseConfig = {
@@ -27,6 +21,9 @@ const db = firebase.firestore();
 const CLOUDINARY_CLOUD_NAME = "deex0vaix"; 
 const CLOUDINARY_UPLOAD_PRESET = "ml_default";
 
+// Global variable to store all advertisements
+let allAdvertisements = [];
+
 document.addEventListener('DOMContentLoaded', () => {
   console.log('Broadcast script loaded');
   
@@ -39,9 +36,70 @@ document.addEventListener('DOMContentLoaded', () => {
   const previewImg = document.getElementById('previewImg');
   const bannersGrid = document.getElementById('bannersGrid');
   const saveBtn = document.getElementById('saveBannerBtn');
+  const searchInput = document.getElementById('searchInput');
 
   let isEditing = false;
   let editingDocId = null;
+
+  // Search functionality
+  if (searchInput) {
+    console.log('Search input found, attaching listener');
+    searchInput.addEventListener('input', (e) => {
+      const searchTerm = e.target.value.toLowerCase().trim();
+      console.log('Searching for:', searchTerm);
+      filterAdvertisements(searchTerm);
+    });
+  } else {
+    console.warn('Search input not found!');
+  }
+
+  // Filter advertisements based on search term
+  function filterAdvertisements(searchTerm) {
+    if (!searchTerm) {
+      displayAdvertisements(allAdvertisements);
+      return;
+    }
+
+    const filtered = allAdvertisements.filter(ad => {
+      const title = (ad.title || '').toLowerCase();
+      const description = (ad.description || '').toLowerCase();
+      const link = (ad.link || '').toLowerCase();
+      
+      return title.includes(searchTerm) || 
+             description.includes(searchTerm) || 
+             link.includes(searchTerm);
+    });
+
+    console.log(`Found ${filtered.length} matching advertisements`);
+    displayAdvertisements(filtered);
+  }
+
+  // Display advertisements in the grid
+  function displayAdvertisements(advertisements) {
+    bannersGrid.innerHTML = '';
+    
+    if (advertisements.length === 0) {
+      const message = searchInput && searchInput.value.trim() 
+        ? 'No advertisements found matching your search.'
+        : 'No advertisements yet. Click "Upload New Banner" to add one.';
+      
+      bannersGrid.innerHTML = `
+        <div style="min-width: 260px; text-align:center; padding:40px; color:#999;">
+          ${message}
+        </div>
+      `;
+      
+      if (uploadBtn && !searchInput.value.trim()) {
+        uploadBtn.style.display = 'inline-block';
+      }
+      return;
+    }
+
+    advertisements.forEach((ad) => {
+      const card = createBannerCard(ad);
+      bannersGrid.appendChild(card);
+    });
+  }
 
   // Load advertisements from Firestore
   function loadAdvertisements() {
@@ -50,32 +108,32 @@ document.addEventListener('DOMContentLoaded', () => {
     db.collection('advertisements')
       .orderBy('order', 'asc')
       .onSnapshot((snapshot) => {
-        bannersGrid.innerHTML = '';
+        allAdvertisements = [];
         
         if (snapshot.empty) {
-          bannersGrid.innerHTML = `
-            <div style="min-width: 260px; text-align:center; padding:40px; color:#999;">
-              No advertisements yet. Click "Upload New Banner" to add one.
-            </div>
-          `;
-          // Show upload button when no ads
-          if (uploadBtn) uploadBtn.style.display = 'block';
+          console.log('No advertisements in database');
+          allAdvertisements = [];
+          displayAdvertisements([]);
+          if (uploadBtn) uploadBtn.style.display = 'inline-block';
           return;
         }
 
-        // Hide upload button when ads exist
-        
-
         snapshot.forEach((docSnap) => {
           const data = docSnap.data();
-          const card = createBannerCard({
+          allAdvertisements.push({
             id: docSnap.id,
             ...data
           });
-          bannersGrid.appendChild(card);
         });
         
-        console.log(`Loaded ${snapshot.size} advertisements`);
+        console.log(`Loaded ${allAdvertisements.length} advertisements`);
+        
+        // Apply current search filter if any
+        if (searchInput && searchInput.value.trim()) {
+          filterAdvertisements(searchInput.value.toLowerCase().trim());
+        } else {
+          displayAdvertisements(allAdvertisements);
+        }
       }, (error) => {
         console.error('Error loading ads:', error);
         bannersGrid.innerHTML = `
@@ -353,5 +411,5 @@ document.addEventListener('DOMContentLoaded', () => {
 
   // Initialize
   loadAdvertisements();
-  console.log('Broadcast system initialized');
+  console.log('Broadcast system initialized with search functionality');
 });
