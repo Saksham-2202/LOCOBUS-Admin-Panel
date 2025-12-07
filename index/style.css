@@ -211,20 +211,61 @@ body {
     opacity: 0.3;
   }
 }
+/* Critical Alerts container as full-height scroll area */
+#criticalAlertsList {
+  overflow-y: auto;
+  padding-right: 4px;
+  height: 100%;          /* stretch inside the panel */
+}
+
+/* Ensure alert items use full width */
+#criticalAlertsList .item {
+  width: 100%;
+  box-sizing: border-box;
+}
+
+#criticalAlertsList .list.empty {
+  height: 100%;
+}
+
 
 /* Panels */
 .panel-row {
   display: flex;
   gap: 20px;
   margin-bottom: 20px;
+  height: 19rem;
+}
+/* Pending Approvals container as scroll area */
+#pendingList {
+  overflow-y: auto;
+  padding-right: 4px;   /* space for scrollbar */
+}
+
+/* Ensure items use full width inside the list */
+#pendingList .item {
+  width: 100%;
+  box-sizing: border-box;
+}
+
+/* Optional: when empty, fill the panel height nicely */
+#pendingList .list.empty {
+  height: 100%;
 }
 
 .panel {
-  background: white;
+  background: rgb(255, 255, 255);
   flex: 1;
   padding: 15px;
   border-radius: 10px;
   box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+
+  /* NEW */
+  display: flex;
+  flex-direction: column;
+}
+.panel .list {
+  flex: 1;
 }
 
 .panel-header {
