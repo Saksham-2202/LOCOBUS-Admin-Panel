@@ -152,14 +152,12 @@ function startComplaintsListener() {
     console.error('Error listening to complaints:', error);
   });
 }
-
 function updateCriticalAlerts() {
-  const criticalAlertsPanel = document.querySelector('.panel-row .panel:nth-child(2) .list');
-  
+  const criticalAlertsPanel = document.getElementById('criticalAlertsList');
   if (!criticalAlertsPanel) return;
-  
+
   const busComplaintStats = calculateActiveComplaintsByBus();
-  
+
   const highComplaintBuses = Object.entries(busComplaintStats)
     .filter(([_, count]) => count >= 5)
     .sort((a, b) => b[1] - a[1]);
@@ -174,21 +172,22 @@ function updateCriticalAlerts() {
   }
 
   criticalAlertsPanel.innerHTML = highComplaintBuses.map(([busNumber, count]) => {
-    const busComplaints = allComplaints.filter(c => 
+    const busComplaints = allComplaints.filter(c =>
       c.busNumber === busNumber && c.status !== 'solved'
     );
-    
+
     const latestComplaint = busComplaints[0];
-    const route = latestComplaint 
-      ? `${latestComplaint.from || '-'} → ${latestComplaint.to || '-'}` 
+    const route = latestComplaint
+      ? `${latestComplaint.from || '-'} → ${latestComplaint.to || '-'}`
       : 'Route unavailable';
-    
+
     const categories = [...new Set(busComplaints.map(c => c.issueCategory))];
-    const categoryText = categories.slice(0, 2).join(', ') + 
+    const categoryText = categories.slice(0, 2).join(', ') +
       (categories.length > 2 ? `, +${categories.length - 2} more` : '');
 
     return `
-      <div class="item critical-alert-item" style="background:#fef2f2; border-left:4px solid #ef4444; margin-bottom:10px;">
+      <div class="item critical-alert-item" 
+           style="background:#fef2f2; border-left:4px solid #ef4444; margin-bottom:10px;">
         <div style="display:flex; justify-content:space-between; align-items:start;">
           <div style="flex:1;">
             <div style="display:flex; align-items:center; gap:8px; margin-bottom:6px;">
@@ -364,7 +363,7 @@ function initRecentNotificationsWidget() {
 
   function clearListeners() {
     if (unsubConductors) { unsubConductors(); unsubConductors = null; }
-    if (unsubUsers) { unsubUsers(); unsubUsers = null; }
+    if (unsubUsers) { unsubUsers(); unsubUsers = null; }``
     if (unsubSingle) { unsubSingle(); unsubSingle = null; }
   }
 
