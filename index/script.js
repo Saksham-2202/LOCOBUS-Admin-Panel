@@ -13,7 +13,7 @@ import {
   addDoc,
   serverTimestamp,
   getDoc,
-  orderBy // <-- added for notifications
+  orderBy
 } from "https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore.js";
 
 // Firebase Configuration
@@ -38,6 +38,10 @@ const fleetUpdateIndicator = document.getElementById('fleetUpdateIndicator');
 const logoutBtn = document.getElementById('logoutBtn');
 const adminNameEl = document.getElementById('adminName');
 const pendingListEl = document.getElementById('pendingList');
+const complaintsCountEl = document.getElementById('complaintsCount');
+
+// State for complaints tracking
+let allComplaints = [];
 
 // Check if admin is logged in
 function checkAuth() {
@@ -107,6 +111,113 @@ function flashUpdateIndicator() {
   }
 }
 
+// ---------------- COMPLAINTS TRACKING ----------------
+
+function calculateActiveComplaintsByBus() {
+  const busStats = {};
+  
+  // Only count complaints that are NOT solved
+  allComplaints.forEach(complaint => {
+    if (complaint.status !== 'solved') {
+      const bus = complaint.busNumber;
+      busStats[bus] = (busStats[bus] || 0) + 1;
+    }
+  });
+  
+  return busStats;
+}
+
+function startComplaintsListener() {
+  const complaintsQuery = query(
+    collection(db, 'complaints'),
+    orderBy('createdAt', 'desc')
+  );
+
+  onSnapshot(complaintsQuery, (snapshot) => {
+    allComplaints = [];
+    
+    snapshot.forEach((doc) => {
+      allComplaints.push({ id: doc.id, ...doc.data() });
+    });
+    
+    // Update complaint count
+    const unresolvedCount = allComplaints.filter(c => c.status !== 'solved').length;
+    if (complaintsCountEl) {
+      complaintsCountEl.textContent = unresolvedCount;
+    }
+    
+    // Update critical alerts
+    updateCriticalAlerts();
+  }, (error) => {
+    console.error('Error listening to complaints:', error);
+  });
+}
+
+function updateCriticalAlerts() {
+  const criticalAlertsPanel = document.querySelector('.panel-row .panel:nth-child(2) .list');
+  
+  if (!criticalAlertsPanel) return;
+  
+  const busComplaintStats = calculateActiveComplaintsByBus();
+  
+  const highComplaintBuses = Object.entries(busComplaintStats)
+    .filter(([_, count]) => count >= 5)
+    .sort((a, b) => b[1] - a[1]);
+
+  if (highComplaintBuses.length === 0) {
+    criticalAlertsPanel.innerHTML = `
+      <div class="list empty" style="height:120px; background:#f0fdf4; border-radius:10px; display:flex; align-items:center; justify-content:center; color:#10b981; font-size:14px;">
+        ✅ No Critical Alerts
+      </div>
+    `;
+    return;
+  }
+
+  criticalAlertsPanel.innerHTML = highComplaintBuses.map(([busNumber, count]) => {
+    const busComplaints = allComplaints.filter(c => 
+      c.busNumber === busNumber && c.status !== 'solved'
+    );
+    
+    const latestComplaint = busComplaints[0];
+    const route = latestComplaint 
+      ? `${latestComplaint.from || '-'} → ${latestComplaint.to || '-'}` 
+      : 'Route unavailable';
+    
+    const categories = [...new Set(busComplaints.map(c => c.issueCategory))];
+    const categoryText = categories.slice(0, 2).join(', ') + 
+      (categories.length > 2 ? `, +${categories.length - 2} more` : '');
+
+    return `
+      <div class="item critical-alert-item" style="background:#fef2f2; border-left:4px solid #ef4444; margin-bottom:10px;">
+        <div style="display:flex; justify-content:space-between; align-items:start;">
+          <div style="flex:1;">
+            <div style="display:flex; align-items:center; gap:8px; margin-bottom:6px;">
+              <span style="font-size:20px;">⚠️</span>
+              <p style="font-weight:bold; margin:0; font-size:15px; color:#991b1b;">
+                Bus ${busNumber}
+              </p>
+              <span style="background:#ef4444; color:white; padding:3px 8px; border-radius:12px; font-size:11px; font-weight:700;">
+                ${count} ACTIVE COMPLAINTS
+              </span>
+            </div>
+            <small style="color:#7f1d1d; font-size:12px; display:block; margin-bottom:4px;">
+              Route: ${route}
+            </small>
+            <small style="color:#991b1b; font-size:11px; font-weight:600;">
+              Issues: ${categoryText}
+            </small>
+          </div>
+          <button 
+            onclick="window.location.href='../help desk/helpDesk.html?bus=${encodeURIComponent(busNumber)}'" 
+            style="background:#ef4444; padding:8px 14px; font-size:12px; border:none; color:white; border-radius:6px; cursor:pointer; white-space:nowrap; font-weight:600;">
+            View Details →
+          </button>
+        </div>
+      </div>
+    `;
+  }).join('');
+}
+
 // ---------------- PENDING APPROVALS ----------------
 
 function loadPendingApprovals() {
@@ -115,7 +226,7 @@ function loadPendingApprovals() {
   const pendingRef = collection(db, 'pending_approvals');
 
   onSnapshot(pendingRef, (snapshot) => {
-    pendingListEl.innerHTML = ''; // Clear existing list
+    pendingListEl.innerHTML = '';
 
     if (snapshot.empty) {
       pendingListEl.innerHTML = `
@@ -162,7 +273,7 @@ function loadPendingApprovals() {
   });
 }
 
-// Expose Approve/Reject to Window scope so HTML onclick can find them
+// Expose Approve/Reject to Window scope
 window.handleApprove = async (docId) => {
   const btn = document.querySelector(`#item-${docId} button:last-child`);
   if (btn) {
@@ -209,7 +320,6 @@ window.handleApprove = async (docId) => {
     });
     
     await Promise.all(stopPromises);
-
     await deleteDoc(pendingRef);
 
     alert("Route Approved & Live!");
@@ -236,20 +346,18 @@ window.handleReject = async (docId) => {
   }
 };
 
-// ---------------- RECENT NOTIFICATIONS (READ-ONLY WIDGET) ----------------
+// ---------------- RECENT NOTIFICATIONS ----------------
 
 function initRecentNotificationsWidget() {
   const recentList = document.getElementById('recentList');
-  if (!recentList) return; // Dashboard might not have this section
+  if (!recentList) return;
 
   const filterTabs = document.querySelectorAll('.filter-tab');
   let currentFilter = 'all';
 
-  // we keep latest snapshots for "all" view
   let conductorNotifs = [];
   let userNotifs = [];
 
-  // unsubscribe functions so we don't stack multiple listeners
   let unsubConductors = null;
   let unsubUsers = null;
   let unsubSingle = null;
@@ -304,7 +412,6 @@ function initRecentNotificationsWidget() {
       return tB - tA;
     });
 
-    // you can limit to top 10 if you want:
     renderNotificationItems(combined.slice(0, 10));
   }
 
@@ -361,7 +468,6 @@ function initRecentNotificationsWidget() {
     });
   }
 
-  // filter tab click behaviour
   if (filterTabs && filterTabs.length > 0) {
     filterTabs.forEach((tab) => {
       tab.addEventListener('click', () => {
@@ -373,23 +479,12 @@ function initRecentNotificationsWidget() {
     });
   }
 
-  // initial message
   recentList.innerHTML = `
     <div style="padding:20px; text-align:center; color:#999;">
       Loading notifications...
     </div>`;
 
-  // start listeners
   subscribeToNotifications();
-}
-
-// ---------------- TOURISM SECTION ----------------
-// (keep your existing initTourismSection implementation here.
-// If you removed tourism from dashboard, you can leave a no-op stub.)
-
-function initTourismSection() {
-  // If you already have a full tourism implementation, DELETE this stub.
-  // This stub just avoids errors if the function is called but no tourism UI exists.
 }
 
 // ---------------- INIT DASHBOARD ----------------
@@ -399,9 +494,9 @@ function initDashboard() {
   if (!admin) return;
   
   startBusStatusListener();
+  startComplaintsListener(); // Added: Listen to complaints
   loadPendingApprovals();
-  initRecentNotificationsWidget(); // <-- NEW: recent notifications from Firestore
-  initTourismSection();            // static tourism section (or stub)
+  initRecentNotificationsWidget();
 }
 
 // Start
