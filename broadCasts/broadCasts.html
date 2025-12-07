@@ -5,30 +5,33 @@
   <meta name="viewport" content="width=device-width,initial-scale=1" />
   <title>Bus Sathi | Broadcasts & Content</title>
   <link rel="stylesheet" href="./broadCasts.css" />
+  
+  <!-- ✅ Firebase SDK - MUST be loaded before your script -->
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
 </head>
 <body>
   <div class="layout">
-    <!-- Sidebar (same structure as other pages; update links if folder names differ) -->
+    <!-- Sidebar -->
     <aside class="sidebar">
       <div class="brand">LOCO BUS 🅱️</div>
       <nav class="menu">
-  <a class="menu-item" href="../index/index.html">Dashboard</a>
-  <a class="menu-item" href="../live-map/live-map.html">Live Map</a>
-  <a class="menu-item" href="../fleet/fleet.html">Fleet Management</a>
-  <a class="menu-item active" href="../broadCasts/broadCasts.html">Broadcasts</a>
-  <a class="menu-item" href="../notifications/notifications.html">Notifications</a>
-  <a class="menu-item " href="../index/createBus.html">Account Panel</a>
-  <a class="menu-item" href="../help desk/helpDesk.html">Help Desk</a>
-  <a class="menu-item" href="../settings/settings.html">Settings</a>
+        <a class="menu-item" href="../index/index.html">Dashboard</a>
+        <a class="menu-item" href="../live-map/live-map.html">Live Map</a>
+        <a class="menu-item" href="../fleet/fleet.html">Fleet Management</a>
+        <a class="menu-item active" href="../broadCasts/broadCasts.html">Broadcasts</a>
+        <a class="menu-item" href="../notifications/notifications.html">Notifications</a>
+        <a class="menu-item" href="../index/createBus.html">Account Panel</a>
+        <a class="menu-item" href="../help desk/helpDesk.html">Help Desk</a>
+        <a class="menu-item" href="../settings/settings.html">Settings</a>
+      </nav>
 
-</nav>
-
-      <!-- UPDATED: Admin image added -->
       <div class="admin-profile">
         <img src="admin img.png" class="admin-icon" />
         ADMIN_33
       </div>
     </aside>
+
     <!-- Main -->
     <main class="main">
       <header class="main-header">
@@ -38,132 +41,80 @@
         </div>
         <div class="header-actions">
           <input class="global-search" placeholder="Search banners, articles..." />
-        
         </div>
       </header>
 
       <section class="tabs">
         <button class="tab active" data-tab="banners">Promotional Banners</button>
         <a class="tab" data-tab="notifications" href="../notifications/notifications.html">Notifications</a>
-        <a class="tab" data-tab="notifications" href="../tourism/tourism.html">Tourism</a>
+        <a class="tab" data-tab="tourism" href="../tourism/tourism.html">Tourism</a>
       </section>
 
       <section class="content-card">
         <div class="content-header">
           <h2>Manage Promotional Banners</h2>
-          <button id="uploadBtn" class="btn-primary">+ Upload New Banner</button>
-          <!-- removed unused hidden uploadInput to prevent accidental triggers -->
+          <!-- Button will be hidden/shown automatically by JavaScript -->
+          <button id="uploadBtn" class="btn-primary" style="display: inline-block;">+ Upload New Banner</button>
         </div>
 
-        <div class="cards-grid" id="bannersGrid">
-          <!-- Card 1 -->
-          <article class="banner-card" data-id="b1">
-            <div class="banner-media">
-              <!-- sample local screenshot image (replace with ../assets/images/banner1.jpg) -->
-              <img src="hawai.jpg" alt="Banner sample" />
+        <!-- Scrollable banner container -->
+        <div style="overflow-x: auto; padding-bottom: 10px;">
+          <div class="cards-scroll" id="bannersGrid">
+            <!-- Ads will be loaded here dynamically -->
+            <div style="min-width: 260px; text-align:center; padding:40px; color:#999;">
+              Loading advertisements...
             </div>
-            <div class="banner-body">
-              <h3 class="title">Summer Special Routes</h3>
-              <p class="desc">Discover our new summer routes with 20% off</p>
-              <a class="link" href="google.com" target="_blank">https://locobus.com/summer-routes</a>
-              <div class="meta">Created: 2024-11-15</div>
-            </div>
-            <div class="banner-actions">
-              <button class="link-btn edit">Edit</button>
-              <button class="link-btn disable">Disable</button>
-              <button class="link-btn del">Delete</button>
-            </div>
-          </article>
-
-          <!-- Card 2 -->
-          <article class="banner-card" data-id="b2">
-            <div class="banner-media">
-              <img src="student.webp" alt="Banner sample 2" />
-            </div>
-            <div class="banner-body">
-              <h3 class="title">Student Discount Program</h3>
-              <p class="desc">50% off for all students with valid ID</p>
-              <a class="link" href="https://locobus.com/student-discount" target="_blank">https://locobus.com/student-discount</a>
-              <div class="meta">Created: 2024-11-12</div>
-            </div>
-            <div class="banner-actions">
-              <button class="link-btn edit">Edit</button>
-              <button class="link-btn disable">Disable</button>
-              <button class="link-btn del">Delete</button>
-            </div>
-          </article>
-
-          <!-- Card 3 (inactive) -->
-          <article class="banner-card inactive" data-id="b3">
-            <div class="banner-media">
-              <img src="trip.jpg" alt="Banner sample 3" />
-              <span class="badge inactive-badge">Inactive</span>
-            </div>
-            <div class="banner-body">
-              <h3 class="title">Holiday Season Promotion</h3>
-              <p class="desc">Special holiday routes and timings</p>
-              <div class="meta">Created: 2024-11-10</div>
-            </div>
-            <div class="banner-actions">
-              <button class="link-btn edit">Edit</button>
-              <button class="link-btn enable">Enable</button>
-              <button class="link-btn del">Delete</button>
-            </div>
-          </article>
+          </div>
         </div>
       </section>
     </main>
   </div>
 
   <!-- Upload Banner Modal -->
-<div class="modal-overlay" id="uploadModal">
-  <div class="modal">
-    <div class="modal-header">
-      <h2>Upload New Banner</h2>
-      <button class="modal-close" id="modalCloseBtn">✕</button>
-    </div>
-
-    <div class="modal-body">
-
-      <!-- Title -->
-      <label class="form-label">Banner Title/Description *</label>
-      <input type="text" id="bannerTitle" class="form-input" placeholder="Enter banner title..." />
-
-      <!-- Description -->
-      <label class="form-label">Description</label>
-      <textarea id="bannerDesc" class="form-input" placeholder="Brief description of the banner..."></textarea>
-
-      <!-- URL -->
-      <label class="form-label">Target URL (Optional)</label>
-      <input type="text" id="bannerURL" class="form-input" placeholder="https://example.com/landing-page" />
-      <small class="hint">Where users will be taken when they click the banner</small>
-
-      <!-- Image Upload -->
-      <label class="form-label">Banner Image *</label>
-      <div class="upload-box" id="uploadBox">
-        <div class="upload-content">
-          <span class="upload-icon">📷</span>
-          <p>Upload your banner image</p>
-          <small>Recommended: 1200×400px, JPG or PNG, max 2MB</small>
-          <button class="choose-btn" id="chooseImgBtn" type="button">Choose Image</button>
-          <input type="file" id="bannerImageInput" accept="image/*" hidden />
-        </div>
-
-        <!-- preview image appears here after choosing a file -->
-        <img id="previewImg" class="preview-img" style="display:none" alt="Preview" />
+  <div class="modal-overlay" id="uploadModal">
+    <div class="modal">
+      <div class="modal-header">
+        <h2>Upload New Banner</h2>
+        <button class="modal-close" id="modalCloseBtn">✕</button>
       </div>
 
-    </div>
+      <div class="modal-body">
+        <!-- Title -->
+        <label class="form-label">Banner Title/Description *</label>
+        <input type="text" id="bannerTitle" class="form-input" placeholder="Enter banner title..." />
 
-    <div class="modal-footer">
-      <button class="btn-cancel" id="cancelBtn">Cancel</button>
-      <button class="btn-save" id="saveBannerBtn">Save Banner</button>
-    </div>
+        <!-- Description -->
+        <label class="form-label">Description</label>
+        <textarea id="bannerDesc" class="form-input" placeholder="Brief description of the banner..."></textarea>
 
+        <!-- URL -->
+        <label class="form-label">Target URL (Optional)</label>
+        <input type="text" id="bannerURL" class="form-input" placeholder="https://example.com/landing-page" />
+        <small class="hint">Where users will be taken when they click the banner</small>
+
+        <!-- Image Upload -->
+        <label class="form-label">Banner Image *</label>
+        <div class="upload-box" id="uploadBox">
+          <div class="upload-content">
+            <span class="upload-icon">📷</span>
+            <p>Upload your banner image</p>
+            <small>Recommended: 1200×400px, JPG or PNG, max 2MB</small>
+            <button class="choose-btn" id="chooseImgBtn" type="button">Choose Image</button>
+            <input type="file" id="bannerImageInput" accept="image/*" hidden />
+          </div>
+
+          <img id="previewImg" class="preview-img" style="display:none" alt="Preview" />
+        </div>
+      </div>
+
+      <div class="modal-footer">
+        <button class="btn-cancel" id="cancelBtn">Cancel</button>
+        <button class="btn-save" id="saveBannerBtn">Save Banner</button>
+      </div>
+    </div>
   </div>
-</div>
 
-
+  <!-- ✅ Your script - MUST be loaded AFTER Firebase -->
   <script src="broadCasts.js"></script>
 </body>
 </html>

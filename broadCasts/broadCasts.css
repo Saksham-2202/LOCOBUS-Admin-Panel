@@ -1,4 +1,4 @@
-/* broadcasts.css — white theme, concise & precise */
+/* broadcasts.css — white theme with horizontal scroll */
 
 /* base */
 * { box-sizing: border-box; margin:0; padding:0; font-family: Inter, Arial, sans-serif; }
@@ -7,7 +7,6 @@ body { background:#f6f8fb; color:#111; }
 /* layout */
 .layout { display:flex; min-height:100vh; }
 
-/* sidebar (same look as other pages) */
 /* Sidebar */
 .sidebar {
   width: 240px;
@@ -82,24 +81,63 @@ body { background:#f6f8fb; color:#111; }
 .content-header { display:flex; justify-content:space-between; align-items:center; margin-bottom:14px; }
 .btn-primary { background:#0b58d0; color:#fff; padding:10px 14px; border-radius:10px; border:none; cursor:pointer; }
 
-/* cards grid */
-.cards-grid { display:grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap:18px; }
-.banner-card { background:#11182710; border-radius:10px; overflow:hidden; display:flex; flex-direction:column; box-shadow: 0 6px 18px rgba(3,10,25,0.04); border:1px solid #f1f5f9; }
+/* ✨ NEW: Horizontal scrollable cards */
+.cards-scroll { 
+  display: flex; 
+  gap: 18px; 
+  overflow-x: auto;
+  padding-bottom: 10px;
+  scroll-behavior: smooth;
+}
+
+/* Custom scrollbar styling */
+.cards-scroll::-webkit-scrollbar {
+  height: 8px;
+}
+
+.cards-scroll::-webkit-scrollbar-track {
+  background: #f1f5f9;
+  border-radius: 10px;
+}
+
+.cards-scroll::-webkit-scrollbar-thumb {
+  background: #cbd5e1;
+  border-radius: 10px;
+}
+
+.cards-scroll::-webkit-scrollbar-thumb:hover {
+  background: #94a3b8;
+}
+
+/* Banner cards - fixed width for horizontal scroll */
+.banner-card { 
+  min-width: 280px;
+  max-width: 280px;
+  background:#11182710; 
+  border-radius:10px; 
+  overflow:hidden; 
+  display:flex; 
+  flex-direction:column; 
+  box-shadow: 0 6px 18px rgba(3,10,25,0.04); 
+  border:1px solid #f1f5f9;
+  flex-shrink: 0;
+}
 .banner-card.inactive { opacity:0.82; }
-.banner-media { position:relative; height:200px; overflow:hidden; background:#f3f4f6; }
+.banner-media { position:relative; height:180px; overflow:hidden; background:#f3f4f6; }
 .banner-media img { width:100%; height:100%; object-fit:cover; display:block; }
 .inactive-badge { position:absolute; top:10px; right:10px; background:#111827; color:#fff; padding:6px 8px; border-radius:12px; font-size:12px; }
 
 /* body */
 .banner-body { padding:12px 14px; flex:1; }
 .title { margin:0 0 6px 0; font-size:16px; font-weight:700; color:#111827; }
-.desc { margin:0 0 8px 0; color:#374151; }
+.desc { margin:0 0 8px 0; color:#374151; font-size:14px; }
 .link { display:block; color:#0b58d0; text-decoration:none; margin-bottom:8px; font-size:13px; }
 .meta { color:#6b7280; font-size:13px; }
 
 /* actions */
 .banner-actions { display:flex; gap:8px; padding:12px 14px; border-top:1px solid #f1f5f9; background:#fff; }
-.link-btn { background:transparent; border:none; color:#0b58d0; cursor:pointer; padding:6px 8px; border-radius:8px; }
+.link-btn { background:transparent; border:none; color:#0b58d0; cursor:pointer; padding:6px 8px; border-radius:8px; font-size:13px; font-weight:600; }
+.link-btn:hover { background:#f1f5f9; }
 .link-btn.disable { color:#d97706; }
 .link-btn.enable { color:#16a34a; }
 .link-btn.del { color:#ef4444; }
@@ -108,7 +146,6 @@ body { background:#f6f8fb; color:#111; }
 @media (max-width:900px) {
   .sidebar { display:none; }
   .main { padding:16px; }
-  .cards-grid { grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); }
 }
 
 /* Modal overlay */
@@ -126,6 +163,7 @@ body { background:#f6f8fb; color:#111; }
 /* Modal box */
 .modal {
   width: 500px;
+  max-width: 90%;
   background: #fff;
   border-radius: 14px;
   padding: 20px;
@@ -152,6 +190,11 @@ body { background:#f6f8fb; color:#111; }
   border-radius: 8px;
   padding: 6px 10px;
   cursor: pointer;
+  font-size: 18px;
+}
+
+.modal-close:hover {
+  background: #e5e7eb;
 }
 
 /* Body */
@@ -188,6 +231,7 @@ textarea.form-input {
   text-align: center;
   background: #f8fafc;
   margin-top: 8px;
+  position: relative;
 }
 
 .upload-icon {
@@ -210,6 +254,10 @@ textarea.form-input {
   cursor: pointer;
 }
 
+.choose-btn:hover {
+  background: #094a9c;
+}
+
 /* Footer */
 .modal-footer {
   display: flex;
@@ -226,6 +274,10 @@ textarea.form-input {
   cursor: pointer;
 }
 
+.btn-cancel:hover {
+  background: #d1d5db;
+}
+
 .btn-save {
   padding: 10px 14px;
   border-radius: 8px;
@@ -233,6 +285,15 @@ textarea.form-input {
   background: #0b58d0;
   color: #fff;
   cursor: pointer;
+}
+
+.btn-save:hover {
+  background: #094a9c;
+}
+
+.btn-save:disabled {
+  background: #94a3b8;
+  cursor: not-allowed;
 }
 
 .preview-img {
@@ -243,7 +304,6 @@ textarea.form-input {
   border-radius: 10px;
   border: 1px solid #dce3ef;
 }
-
 
 /* Fade animation */
 @keyframes fadeIn {

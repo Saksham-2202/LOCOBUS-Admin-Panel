@@ -1,49 +1,118 @@
-// broadCasts.js - unified, cleaned, and feature-complete
+// broadCasts.js - Fixed version without ES6 modules
+// Make sure to add Firebase SDK scripts to your HTML first
+
+// ⚠️ IMPORTANT: Add these scripts to your HTML <head> section:
+/*
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
+*/
+
+// Firebase Configuration
+const firebaseConfig = {
+  apiKey: "AIzaSyCRtx7Oyda48Hz0eu-BiNrGYiK3_36Vl-c",
+  authDomain: "locobus-e4274.firebaseapp.com",
+  projectId: "locobus-e4274",
+  storageBucket: "locobus-e4274.firebasestorage.app",
+  messagingSenderId: "296482389648",
+  appId: "1:296482389648:web:1827bd92dc55c8a857e215"
+};
+
+// Initialize Firebase
+if (!firebase.apps.length) {
+  firebase.initializeApp(firebaseConfig);
+}
+const db = firebase.firestore();
+
+// Cloudinary Configuration
+const CLOUDINARY_CLOUD_NAME = "deex0vaix"; 
+const CLOUDINARY_UPLOAD_PRESET = "ml_default";
+
 document.addEventListener('DOMContentLoaded', () => {
-  // ---- DOM elements ----
+  console.log('Broadcast script loaded');
+  
   const uploadModal = document.getElementById('uploadModal');
   const uploadBtn = document.getElementById('uploadBtn');
   const modalCloseBtn = document.getElementById('modalCloseBtn');
   const cancelBtn = document.getElementById('cancelBtn');
-
   const chooseImgBtn = document.getElementById('chooseImgBtn');
   const bannerImageInput = document.getElementById('bannerImageInput');
   const previewImg = document.getElementById('previewImg');
-
   const bannersGrid = document.getElementById('bannersGrid');
   const saveBtn = document.getElementById('saveBannerBtn');
 
-  // state for editing
   let isEditing = false;
-  let editingCard = null;
+  let editingDocId = null;
 
-  // ---- helpers ----
-  function escapeHtml(s) {
-    return String(s ?? '').replaceAll('&','&amp;').replaceAll('<','&lt;').replaceAll('>','&gt;');
+  // Load advertisements from Firestore
+  function loadAdvertisements() {
+    console.log('Loading advertisements...');
+    
+    db.collection('advertisements')
+      .orderBy('order', 'asc')
+      .onSnapshot((snapshot) => {
+        bannersGrid.innerHTML = '';
+        
+        if (snapshot.empty) {
+          bannersGrid.innerHTML = `
+            <div style="min-width: 260px; text-align:center; padding:40px; color:#999;">
+              No advertisements yet. Click "Upload New Banner" to add one.
+            </div>
+          `;
+          // Show upload button when no ads
+          if (uploadBtn) uploadBtn.style.display = 'block';
+          return;
+        }
+
+        // Hide upload button when ads exist
+        
+
+        snapshot.forEach((docSnap) => {
+          const data = docSnap.data();
+          const card = createBannerCard({
+            id: docSnap.id,
+            ...data
+          });
+          bannersGrid.appendChild(card);
+        });
+        
+        console.log(`Loaded ${snapshot.size} advertisements`);
+      }, (error) => {
+        console.error('Error loading ads:', error);
+        bannersGrid.innerHTML = `
+          <div style="min-width: 260px; text-align:center; padding:40px; color:#ef4444;">
+            Error loading advertisements. Check console for details.
+          </div>
+        `;
+      });
   }
 
-  // create a card element from data
-  function createBannerCard({ id, img, title, desc, link = '', date, inactive = false }) {
+  // Create banner card element
+  function createBannerCard({ id, imageUrl, title, description, link = '', createdAt, active = true, order = 0 }) {
     const card = document.createElement('article');
     card.className = 'banner-card';
-    if (inactive) card.classList.add('inactive');
-    if (id) card.dataset.id = id;
+    if (!active) card.classList.add('inactive');
+    card.dataset.id = id;
 
-    const badgeHtml = inactive ? '<span class="badge inactive-badge">Inactive</span>' : '';
-    const toggleBtn = inactive 
-      ? '<button class="link-btn enable">Enable</button>'
-      : '<button class="link-btn disable">Disable</button>';
+    let date = 'N/A';
+    if (createdAt && createdAt.toDate) {
+      date = createdAt.toDate().toISOString().slice(0, 10);
+    }
+    
+    const badgeHtml = !active ? '<span class="badge inactive-badge">Inactive</span>' : '';
+    const toggleBtn = active 
+      ? '<button class="link-btn disable">Disable</button>'
+      : '<button class="link-btn enable">Enable</button>';
 
     card.innerHTML = `
       <div class="banner-media">
-        <img src="${escapeHtml(img)}" alt="${escapeHtml(title)}">
+        <img src="${imageUrl}" alt="${title}">
         ${badgeHtml}
       </div>
       <div class="banner-body">
-        <h3 class="title">${escapeHtml(title)}</h3>
-        <p class="desc">${escapeHtml(desc)}</p>
-        ${link ? `<a class="link" href="${escapeHtml(link)}" target="_blank">${escapeHtml(link)}</a>` : ''}
-        <div class="meta">Created: ${escapeHtml(date)}</div>
+        <h3 class="title">${title}</h3>
+        <p class="desc">${description || ''}</p>
+        ${link ? `<a class="link" href="${link}" target="_blank">${link}</a>` : ''}
+        <div class="meta">Order: ${order} • Created: ${date}</div>
       </div>
       <div class="banner-actions">
         <button class="link-btn edit">Edit</button>
@@ -51,81 +120,89 @@ document.addEventListener('DOMContentLoaded', () => {
         <button class="link-btn del">Delete</button>
       </div>
     `;
+
     attachCardHandlers(card);
     return card;
   }
 
-  // toggle active/inactive state
-  function toggleCardState(card) {
-    const isInactive = card.classList.contains('inactive');
-    const mediaDiv = card.querySelector('.banner-media');
+  // Attach event handlers to card
+  function attachCardHandlers(card) {
+    const editBtn = card.querySelector('.edit');
+    const delBtn = card.querySelector('.del');
     const actionsDiv = card.querySelector('.banner-actions');
+
+    if (editBtn) {
+      editBtn.addEventListener('click', () => openEditModal(card));
+    }
     
-    if (isInactive) {
-      // Enable the card
-      card.classList.remove('inactive');
-      const badge = mediaDiv.querySelector('.inactive-badge');
-      if (badge) badge.remove();
-      
-      const enableBtn = actionsDiv.querySelector('.enable');
-      if (enableBtn) {
-        enableBtn.textContent = 'Disable';
-        enableBtn.classList.remove('enable');
-        enableBtn.classList.add('disable');
+    if (delBtn) {
+      delBtn.addEventListener('click', async () => {
+        if (confirm('Delete this banner permanently?')) {
+          try {
+            await db.collection('advertisements').doc(card.dataset.id).delete();
+            console.log('Banner deleted successfully');
+          } catch (error) {
+            console.error('Delete error:', error);
+            alert('Failed to delete banner: ' + error.message);
+          }
+        }
+      });
+    }
+
+    actionsDiv.addEventListener('click', async (e) => {
+      if (e.target.classList.contains('disable') || e.target.classList.contains('enable')) {
+        const newActiveState = e.target.classList.contains('enable');
+        
+        try {
+          await db.collection('advertisements').doc(card.dataset.id).update({
+            active: newActiveState
+          });
+          console.log('Banner status updated');
+        } catch (error) {
+          console.error('Toggle error:', error);
+          alert('Failed to update status: ' + error.message);
+        }
       }
-    } else {
-      // Disable the card
-      card.classList.add('inactive');
-      
-      // Add inactive badge if it doesn't exist
-      if (!mediaDiv.querySelector('.inactive-badge')) {
-        const badge = document.createElement('span');
-        badge.className = 'badge inactive-badge';
-        badge.textContent = 'Inactive';
-        mediaDiv.appendChild(badge);
+    });
+  }
+
+  // Upload image to Cloudinary
+  async function uploadToCloudinary(file) {
+    console.log('Uploading to Cloudinary...', file.name);
+    
+    const formData = new FormData();
+    formData.append('file', file);
+    formData.append('upload_preset', CLOUDINARY_UPLOAD_PRESET);
+
+    try {
+      const response = await fetch(
+        `https://api.cloudinary.com/v1_1/${CLOUDINARY_CLOUD_NAME}/image/upload`,
+        {
+          method: 'POST',
+          body: formData
+        }
+      );
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        console.error('Cloudinary error:', errorData);
+        throw new Error('Upload failed: ' + (errorData.error?.message || 'Unknown error'));
       }
-      
-      const disableBtn = actionsDiv.querySelector('.disable');
-      if (disableBtn) {
-        disableBtn.textContent = 'Enable';
-        disableBtn.classList.remove('disable');
-        disableBtn.classList.add('enable');
-      }
+
+      const data = await response.json();
+      console.log('Upload successful:', data.secure_url);
+      return data.secure_url;
+    } catch (error) {
+      console.error('Cloudinary upload error:', error);
+      throw error;
     }
   }
 
-  // attach handlers for edit/disable/enable/delete on a card
-  function attachCardHandlers(card) {
-    if (!card) return;
-    const edit = card.querySelector('.edit');
-    const del = card.querySelector('.del');
-
-    if (edit) edit.addEventListener('click', () => openEditModal(card));
-    if (del) del.addEventListener('click', () => {
-      if (confirm('Delete this banner?')) {
-        const img = card.querySelector('.banner-media img');
-        if (img && img.src && img.src.startsWith('blob:')) {
-          URL.revokeObjectURL(img.src);
-        }
-        card.remove();
-      }
-    });
-
-    // Use event delegation for disable/enable since button changes
-    card.querySelector('.banner-actions').addEventListener('click', (e) => {
-      if (e.target.classList.contains('disable') || e.target.classList.contains('enable')) {
-        toggleCardState(card);
-      }
-    });
-  }
-
-  // initialize handlers for existing cards on page
-  document.querySelectorAll('.banner-card').forEach(attachCardHandlers);
-
-  // ---- modal open/close ----
+  // Open modal functions
   function openUploadModal() {
+    console.log('Opening upload modal');
     isEditing = false;
-    editingCard = null;
+    editingDocId = null;
     document.getElementById('bannerTitle').value = '';
     document.getElementById('bannerDesc').value = '';
     document.getElementById('bannerURL').value = '';
@@ -136,26 +213,22 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 
   function openEditModal(card) {
-    if (!card) return;
+    console.log('Opening edit modal for:', card.dataset.id);
     isEditing = true;
-    editingCard = card;
+    editingDocId = card.dataset.id;
 
     const title = card.querySelector('.title')?.innerText || '';
     const desc = card.querySelector('.desc')?.innerText || '';
     const link = card.querySelector('.link')?.getAttribute('href') || '';
-    const imgEl = card.querySelector('.banner-media img');
-    const imgSrc = imgEl ? imgEl.src : '';
+    const imgSrc = card.querySelector('.banner-media img')?.src || '';
 
     document.getElementById('bannerTitle').value = title;
     document.getElementById('bannerDesc').value = desc;
-    document.getElementById('bannerURL').value = link || '';
-
+    document.getElementById('bannerURL').value = link;
+    
     if (imgSrc) {
       previewImg.src = imgSrc;
       previewImg.style.display = 'block';
-    } else {
-      previewImg.src = '';
-      previewImg.style.display = 'none';
     }
 
     bannerImageInput.value = '';
@@ -166,129 +239,119 @@ document.addEventListener('DOMContentLoaded', () => {
     uploadModal.style.display = 'none';
   }
 
-  // ---- search functionality ----
-  const searchInput = document.querySelector('.global-search');
+  // Event listeners
+  if (uploadBtn) {
+    uploadBtn.addEventListener('click', (e) => {
+      e.preventDefault();
+      console.log('Upload button clicked');
+      openUploadModal();
+    });
+  }
   
-  function filterBanners(searchTerm) {
-    const term = searchTerm.toLowerCase().trim();
-    const cards = bannersGrid.querySelectorAll('.banner-card');
-    
-    cards.forEach(card => {
-      const title = card.querySelector('.title')?.textContent.toLowerCase() || '';
-      const desc = card.querySelector('.desc')?.textContent.toLowerCase() || '';
-      const link = card.querySelector('.link')?.textContent.toLowerCase() || '';
+  if (modalCloseBtn) {
+    modalCloseBtn.addEventListener('click', closeModal);
+  }
+  
+  if (cancelBtn) {
+    cancelBtn.addEventListener('click', closeModal);
+  }
+  
+  if (chooseImgBtn) {
+    chooseImgBtn.addEventListener('click', () => bannerImageInput.click());
+  }
+
+  if (bannerImageInput) {
+    bannerImageInput.addEventListener('change', (e) => {
+      const file = e.target.files[0];
+      if (!file) return;
       
-      // Check if search term matches title, description, or link
-      if (title.includes(term) || desc.includes(term) || link.includes(term)) {
-        card.style.display = '';
-      } else {
-        card.style.display = 'none';
-      }
-    });
-  }
-  
-  if (searchInput) {
-    searchInput.addEventListener('input', (e) => {
-      filterBanners(e.target.value);
-    });
-  }
-
-  // ---- event wiring ----
-  uploadBtn.addEventListener('click', openUploadModal);
-  if (modalCloseBtn) modalCloseBtn.addEventListener('click', closeModal);
-  if (cancelBtn) cancelBtn.addEventListener('click', closeModal);
-
-  chooseImgBtn.addEventListener('click', () => bannerImageInput.click());
-
-  bannerImageInput.addEventListener('change', (e) => {
-    const file = e.target.files[0];
-    if (!file) return;
-    const imgURL = URL.createObjectURL(file);
-    previewImg.src = imgURL;
-    previewImg.style.display = 'block';
-  });
-
-  // ---- save logic: create or update ----
-  saveBtn.addEventListener('click', () => {
-    const title = document.getElementById('bannerTitle').value.trim();
-    const desc = document.getElementById('bannerDesc').value.trim();
-    const url = document.getElementById('bannerURL').value.trim();
-    const file = bannerImageInput.files[0];
-
-    if (!title) { alert('Please enter a title.'); return; }
-    if (!isEditing && !file) { alert('Please choose an image.'); return; }
-
-    function updateCardDOM(card, imgURL) {
-      if (imgURL) {
-        let img = card.querySelector('.banner-media img');
-        if (!img) {
-          const media = document.createElement('div');
-          media.className = 'banner-media';
-          media.innerHTML = `<img src="${imgURL}" alt="${escapeHtml(title)}" />`;
-          card.insertBefore(media, card.firstChild);
-        } else {
-          img.src = imgURL;
-          img.alt = title;
-        }
-      }
-
-      const titleEl = card.querySelector('.title');
-      const descEl = card.querySelector('.desc');
-      const linkEl = card.querySelector('.link');
-      const metaEl = card.querySelector('.meta');
-
-      if (titleEl) titleEl.textContent = title;
-      if (descEl) descEl.textContent = desc;
-      if (linkEl) {
-        if (url) { linkEl.href = url; linkEl.textContent = url; }
-        else linkEl.remove();
-      } else if (url) {
-        const meta = card.querySelector('.meta');
-        const a = document.createElement('a');
-        a.className = 'link';
-        a.href = url;
-        a.target = '_blank';
-        a.textContent = url;
-        meta.parentNode.insertBefore(a, meta);
-      }
-      if (metaEl) metaEl.textContent = `Created: ${new Date().toISOString().slice(0,10)}`;
-    }
-
-    if (file) {
+      console.log('Image selected:', file.name);
       const imgURL = URL.createObjectURL(file);
-      if (isEditing && editingCard) {
-        updateCardDOM(editingCard, imgURL);
-        closeModal();
-      } else {
-        const card = createBannerCard({
-          id: 'new',
-          img: imgURL,
-          title,
-          desc,
-          link: url,
-          date: new Date().toISOString().slice(0,10),
-          inactive: false
-        });
-        bannersGrid.prepend(card);
-        closeModal();
+      previewImg.src = imgURL;
+      previewImg.style.display = 'block';
+    });
+  }
+
+  // Save banner
+  if (saveBtn) {
+    saveBtn.addEventListener('click', async (e) => {
+      e.preventDefault();
+      
+      const title = document.getElementById('bannerTitle').value.trim();
+      const desc = document.getElementById('bannerDesc').value.trim();
+      const url = document.getElementById('bannerURL').value.trim();
+      const file = bannerImageInput.files[0];
+
+      console.log('Save clicked:', { title, desc, url, hasFile: !!file });
+
+      if (!title) {
+        alert('Please enter a title.');
+        return;
       }
-    } else {
-      if (isEditing && editingCard) {
-        updateCardDOM(editingCard, null);
-        closeModal();
-      } else {
+
+      if (!isEditing && !file) {
         alert('Please choose an image.');
         return;
       }
-    }
 
-    document.getElementById('bannerTitle').value = '';
-    document.getElementById('bannerDesc').value = '';
-    document.getElementById('bannerURL').value = '';
-    bannerImageInput.value = '';
-    previewImg.src = '';
-    previewImg.style.display = 'none';
-    isEditing = false;
-    editingCard = null;
-  });
+      saveBtn.textContent = 'Uploading...';
+      saveBtn.disabled = true;
+
+      try {
+        let imageUrl = previewImg.src;
+
+        // Upload new image if selected
+        if (file) {
+          imageUrl = await uploadToCloudinary(file);
+        }
+
+        if (isEditing && editingDocId) {
+          // Update existing ad
+          const updateData = {
+            title,
+            description: desc,
+            link: url || null,
+            updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+          };
+
+          if (file) {
+            updateData.imageUrl = imageUrl;
+          }
+
+          await db.collection('advertisements').doc(editingDocId).update(updateData);
+          console.log('Advertisement updated');
+          alert('Advertisement updated successfully!');
+        } else {
+          // Create new ad
+          const currentAds = await db.collection('advertisements').get();
+          const newOrder = currentAds.size;
+
+          await db.collection('advertisements').add({
+            imageUrl,
+            title,
+            description: desc,
+            link: url || null,
+            active: true,
+            order: newOrder,
+            createdAt: firebase.firestore.FieldValue.serverTimestamp()
+          });
+          
+          console.log('New advertisement created');
+          alert('Advertisement created successfully!');
+        }
+
+        closeModal();
+      } catch (error) {
+        console.error('Save error:', error);
+        alert('Failed to save banner: ' + error.message);
+      } finally {
+        saveBtn.textContent = 'Save Banner';
+        saveBtn.disabled = false;
+      }
+    });
+  }
+
+  // Initialize
+  loadAdvertisements();
+  console.log('Broadcast system initialized');
 });
