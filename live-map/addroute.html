@@ -11,7 +11,7 @@
     <aside class="sidebar">
       <div class="brand">
         <span>LOCO BUS</span>
-      <div id="busLogoAnim" class="bus-logo"></div>
+        <div id="busLogoAnim" class="bus-logo"></div>
       </div>  
       <nav class="menu">
         <a class="menu-item" href="../index/index.html">Dashboard</a>
@@ -21,9 +21,8 @@
         <a class="menu-item" href="../notifications/notifications.html">Notifications</a>
         <a class="menu-item" href="../index/createBus.html">Account Panel</a>
         <a class="menu-item" href="../help desk/helpDesk.html">Help Desk</a>
-         <a class="menu-item active" href="../live-map/addroute.html">Add route</a>
+        <a class="menu-item active" href="../live-map/addroute.html">Add route</a>
         <a class="menu-item" href="../settings/settings.html">Settings</a>
-     
       </nav>
 
       <div class="admin-profile">
@@ -32,108 +31,117 @@
       </div>
     </aside>
 
-        <!-- Main Content -->
-        <main class="main-content">
-            <div class="page-header">
-                <div>
-                    <h1>Bulk Route Upload System</h1>
-                    <p class="subtitle">Import multiple bus routes from Excel/CSV with automatic geocoding</p>
+    <!-- Main Content -->
+    <main class="main-content">
+        <div class="page-header">
+            <div>
+                <h1>Bulk Route Upload System</h1>
+                <p class="subtitle">Import multiple bus routes from Excel/CSV with automatic geocoding</p>
+            </div>
+        </div>
+
+        <div class="content-wrapper">
+            <!-- Template Download Card -->
+            <div class="card template-card">
+                <div class="card-header">
+                    <span class="card-icon">📋</span>
+                    <h3>Step 1: Download Excel Template</h3>
+                </div>
+                <div class="card-body">
+                    <p class="card-description">Download the template, fill in your route data, then upload it below.</p>
+                    <button class="btn-download" onclick="downloadTemplate()">
+                        <span>⬇️</span>
+                        Download Excel Template
+                    </button>
                 </div>
             </div>
 
-            <div class="content-wrapper">
-                <!-- Template Download Card -->
-                <div class="card template-card">
-                    <div class="card-header">
-                        <span class="card-icon">📋</span>
-                        <h3>Step 1: Download Excel Template</h3>
+            <!-- Upload Card -->
+            <div class="card upload-card">
+                <div class="card-header">
+                    <span class="card-icon">📤</span>
+                    <h3>Step 2: Upload Your File</h3>
+                </div>
+                <div class="card-body">
+                    <div class="upload-zone">
+                        <input type="file" id="fileInput" accept=".csv,.xlsx,.xls" onchange="handleFileSelect(event)">
+                        <label for="fileInput" class="upload-label">
+                            <div class="upload-content">
+                                <span class="upload-icon">📁</span>
+                                <span class="upload-text">Choose Excel/CSV File</span>
+                                <span class="upload-hint">Supported formats: .xlsx, .xls, .csv</span>
+                            </div>
+                        </label>
                     </div>
-                    <div class="card-body">
-                        <p class="card-description">Download the template, fill in your route data, then upload it below.</p>
-                        <button class="btn-download" onclick="downloadTemplate()">
-                            <span>⬇️</span>
-                            Download Excel Template
+                </div>
+            </div>
+
+            <!-- Preview Section -->
+            <div class="card preview-card" id="previewSection">
+                <div class="card-header">
+                    <span class="card-icon">📊</span>
+                    <h3>Data Preview</h3>
+                </div>
+                <div class="card-body">
+                    <div class="table-wrapper">
+                        <table class="preview-table" id="previewTable">
+                            <thead>
+                                <tr>
+                                    <th>Route Number</th>
+                                    <th>From</th>
+                                    <th>To</th>
+                                    <th>Distance (km)</th>
+                                    <th>Fare (₹)</th>
+                                </tr>
+                            </thead>
+                            <tbody id="previewBody"></tbody>
+                        </table>
+                    </div>
+
+                    <!-- Action Buttons -->
+                    <div class="action-buttons" id="actionButtons">
+                        <button class="btn btn-primary" onclick="processAndUpload()">
+                            <span>✅</span>
+                            Process & Upload Routes
+                        </button>
+                        <button class="btn btn-secondary" onclick="resetUpload()">
+                            <span>🔄</span>
+                            Cancel
                         </button>
                     </div>
                 </div>
+            </div>
 
-                <!-- Upload Card -->
-                <div class="card upload-card">
-                    <div class="card-header">
-                        <span class="card-icon">📤</span>
-                        <h3>Step 2: Upload Your File</h3>
-                    </div>
-                    <div class="card-body">
-                        <div class="upload-zone">
-                            <input type="file" id="fileInput" accept=".csv,.xlsx,.xls" onchange="handleFileSelect(event)">
-                            <label for="fileInput" class="upload-label">
-                                <div class="upload-content">
-                                    <span class="upload-icon">📁</span>
-                                    <span class="upload-text">Choose Excel/CSV File</span>
-                                    <span class="upload-hint">Supported formats: .xlsx, .xls, .csv</span>
-                                </div>
-                            </label>
-                        </div>
-                    </div>
+            <!-- Progress Section -->
+            <div class="card progress-card" id="progressSection">
+                <div class="card-header">
+                    <span class="card-icon">⚙️</span>
+                    <h3>Processing Routes...</h3>
                 </div>
-
-                <!-- Preview Section -->
-                <div class="card preview-card" id="previewSection" style="display: none;">
-                    <div class="card-header">
-                        <span class="card-icon">📊</span>
-                        <h3>Data Preview</h3>
-                    </div>
-                    <div class="card-body">
-                        <div class="table-wrapper">
-                            <table class="preview-table" id="previewTable">
-                                <thead>
-                                    <tr>
-                                        <th>Route Number</th>
-                                        <th>From</th>
-                                        <th>To</th>
-                                        <th>Distance (km)</th>
-                                        <th>Fare (₹)</th>
-                                    </tr>
-                                </thead>
-                                <tbody id="previewBody"></tbody>
-                            </table>
-                        </div>
-
-                        <!-- Action Buttons -->
-                        <div class="action-buttons" id="actionButtons">
-                            <button class="btn btn-primary" onclick="processAndUpload()">
-                                <span>✅</span>
-                                Process & Upload Routes
-                            </button>
-                            <button class="btn btn-secondary" onclick="resetUpload()">
-                                <span>🔄</span>
-                                Cancel
-                            </button>
+                <div class="card-body">
+                    <div class="progress-bar-container">
+                        <div class="progress-bar" id="progressBar">
+                            <span>0%</span>
                         </div>
                     </div>
-                </div>
-
-                <!-- Progress Section -->
-                <div class="card progress-card" id="progressSection" style="display: none;">
-                    <div class="card-header">
-                        <span class="card-icon">⚙️</span>
-                        <h3>Processing Routes...</h3>
-                    </div>
-                    <div class="card-body">
-                        <div class="progress-bar-container">
-                            <div class="progress-bar" id="progressBar">
-                                <span>0%</span>
-                            </div>
-                        </div>
-                        <div class="status-log" id="statusLog"></div>
-                    </div>
+                    <div class="status-log" id="statusLog"></div>
                 </div>
             </div>
-        </main>
-    </div>
+        </div>
+    </main>
+ </div>
 
+    <!-- Firebase SDK -->
+    <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore-compat.js"></script>
+    
+    <!-- SheetJS for Excel parsing -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    
     <!-- Lottie Player for Bus Animation -->
-      <script src="https://cdnjs.cloudflare.com/ajax/libs/bodymovin/5.12.2/lottie.min.js"></script>
-    <script type="module" src="addroute.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/bodymovin/5.12.2/lottie.min.js"></script>
+    
+    <!-- Your Script -->
+    <script src="addroute.js"></script>
 </body>
 </html>
