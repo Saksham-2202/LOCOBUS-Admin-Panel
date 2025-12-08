@@ -50,15 +50,16 @@
           </div>
         </div>
 
-        <div class="stat-box">
-          <h3>Pending Approvals</h3>
-          <p class="value"><span id="pendingApprovalsCount">--</span></p>
-          <p class="label">Route Updates</p>
+        <div class="stat-box clickable" id="reliabilityBox">
+          <h3>Fleet Reliability</h3>
+          <p class="value"><span id="avgReliability">--</span>%</p>
+          <p class="label">Avg On-Time Rate</p>
+          <div class="click-hint">View Details ➝</div>
         </div>
 
         <div class="stat-box highlight">
           <h3>New Complaints</h3>
-          <p class="value"><span id="complaintsCount">14</span></p>
+          <p class="value"><span id="complaintsCount">--</span></p>
           <p class="label">Unresolved Complaints</p>
         </div>
 
@@ -67,6 +68,27 @@
           <p class="value"><span id="activeBannersCount">--</span></p>
           <p class="label">Promotional Ads</p>
         </div>
+
+      </section>
+
+<div id="reliabilityModalOverlay" class="notif-overlay" aria-hidden="true">
+    <div class="notif-modal" role="dialog">
+      <header class="nm-header">
+        <h3>Bus On-Time Performance</h3>
+        <button id="reliabilityClose" class="nm-close">✕</button>
+      </header>
+      <div class="nm-body">
+        <div class="list-header" style="display:flex; justify-content:space-between; padding-bottom:10px; border-bottom:1px solid #eee; margin-bottom:10px; font-weight:bold; color:#666;">
+            <span>Bus Number</span>
+            <span>Reliability Score</span>
+        </div>
+        <div id="reliabilityListContainer" style="max-height: 300px; overflow-y: auto;">
+            <div style="text-align:center; color:#999;">Loading...</div>
+        </div>
+      </div>
+    </div>
+  </div>
+       
 
       </section>
 

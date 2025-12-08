@@ -1,4 +1,4 @@
-// Dashboard JS - Real-time Bus Tracking & Approval System
+// Dashboard JS - Real-time Bus Tracking, Reliability & Approval System
 
 import { initializeApp } from "https://www.gstatic.com/firebasejs/9.23.0/firebase-app.js";
 import { 
@@ -39,11 +39,19 @@ const logoutBtn = document.getElementById('logoutBtn');
 const adminNameEl = document.getElementById('adminName');
 const pendingListEl = document.getElementById('pendingList');
 const complaintsCountEl = document.getElementById('complaintsCount');
-const pendingApprovalsCountEl = document.getElementById('pendingApprovalsCount');
+const pendingApprovalsCountEl = document.getElementById('pendingApprovalsCount'); // Might be null if HTML replaced, handled safely below
 const activeBannersCountEl = document.getElementById('activeBannersCount');
 
-// State for complaints tracking
+// NEW: Reliability Elements
+const reliabilityBox = document.getElementById('reliabilityBox');
+const avgReliabilityEl = document.getElementById('avgReliability');
+const reliabilityModalOverlay = document.getElementById('reliabilityModalOverlay');
+const reliabilityCloseBtn = document.getElementById('reliabilityClose');
+const reliabilityListContainer = document.getElementById('reliabilityListContainer');
+
+// State Variables
 let allComplaints = [];
+let fleetReliabilityData = []; // Stores individual bus stats
 
 // Check if admin is logged in
 function checkAuth() {
@@ -75,7 +83,7 @@ if (logoutBtn) {
   });
 }
 
-// ---------------- BUS STATUS LISTENER ----------------
+// ---------------- BUS STATUS & RELIABILITY LISTENER ----------------
 
 function startBusStatusListener() {
   const busesRef = collection(db, 'buses');
@@ -84,16 +92,60 @@ function startBusStatusListener() {
     let totalBuses = 0;
     let activeBuses = 0;
     
+    // Reliability Calculation Variables
+    let sumReliability = 0;
+    let countWithVotes = 0;
+    fleetReliabilityData = []; // Reset list on every update
+    
     snapshot.forEach((docSnap) => {
       const busData = docSnap.data();
+      const busId = docSnap.id;
+      
+      // 1. Active Fleet Count
       totalBuses++;
       if (busData.liveStatus && busData.liveStatus.status === 'active') {
         activeBuses++;
       }
+
+      // 2. Reliability Data Extraction
+      const stats = busData.stats || {};
+      const percentage = stats.reliabilityPercentage || 0;
+      const totalVotes = stats.totalVotes || 0;
+      const busNumber = busData.busNumber || busId;
+
+      // Store for Modal
+      fleetReliabilityData.push({
+        busNumber: busNumber,
+        percentage: percentage,
+        votes: totalVotes
+      });
+
+      // Aggregate for Average (Only count buses that have data)
+      if (totalVotes > 0) {
+        sumReliability += percentage;
+        countWithVotes++;
+      }
     });
     
+    // Update Active/Total Display
     updateFleetDisplay(activeBuses, totalBuses);
     flashUpdateIndicator();
+
+    // Update Average Reliability Display
+    let globalAvg = 0;
+    if (countWithVotes > 0) {
+        globalAvg = Math.round(sumReliability / countWithVotes);
+    }
+    
+    if (avgReliabilityEl) {
+        avgReliabilityEl.textContent = globalAvg;
+        
+        // Dynamic color for the average
+        if(globalAvg >= 80) avgReliabilityEl.style.color = '#10b981'; // Green
+        else if(globalAvg >= 50) avgReliabilityEl.style.color = '#f59e0b'; // Orange
+        else avgReliabilityEl.style.color = '#ef4444'; // Red
+    }
+
   }, (error) => {
     console.error('Error listening to bus status:', error);
   });
@@ -113,6 +165,71 @@ function flashUpdateIndicator() {
   }
 }
 
+// ---------------- RELIABILITY MODAL LOGIC ----------------
+
+// Event Listeners for Modal
+if (reliabilityBox) {
+    reliabilityBox.addEventListener('click', () => {
+        openReliabilityModal();
+    });
+}
+
+if (reliabilityCloseBtn) {
+    reliabilityCloseBtn.addEventListener('click', () => {
+        reliabilityModalOverlay.style.display = 'none';
+    });
+}
+
+// Close when clicking outside modal
+window.addEventListener('click', (e) => {
+    if (e.target === reliabilityModalOverlay) {
+        reliabilityModalOverlay.style.display = 'none';
+    }
+});
+
+function openReliabilityModal() {
+    if (!reliabilityListContainer) return;
+
+    // Sort: Highest reliability first
+    fleetReliabilityData.sort((a, b) => b.percentage - a.percentage);
+
+    reliabilityListContainer.innerHTML = '';
+
+    if (fleetReliabilityData.length === 0) {
+        reliabilityListContainer.innerHTML = '<div style="text-align:center; padding:20px; color:#999;">No bus data available.</div>';
+    } else {
+        fleetReliabilityData.forEach(bus => {
+            // Logic for coloring
+            const pct = Math.round(bus.percentage);
+            let colorStr = '#ef4444'; // Red default
+            if (pct >= 80) colorStr = '#10b981'; // Green
+            else if (pct >= 50) colorStr = '#f59e0b'; // Orange
+            
+            // Grey out if no votes yet
+            if (bus.votes === 0) colorStr = '#9ca3af';
+
+            const percentageText = bus.votes === 0 ? 'No Data' : `${pct}%`;
+
+            const itemHTML = `
+                <div style="display:flex; justify-content:space-between; align-items:center; padding: 12px 10px; border-bottom: 1px solid #f3f4f6;">
+                    <div style="display:flex; align-items:center; gap:12px;">
+                        <span style="background:#e0e7ff; color:#3730a3; padding:6px 12px; border-radius:6px; font-weight:700; font-size:14px;">
+                            ${bus.busNumber}
+                        </span>
+                        <span style="font-size:12px; color:#6b7280;">(${bus.votes} votes)</span>
+                    </div>
+                    <div style="font-weight:700; color:${colorStr}; font-size:16px;">
+                        ${percentageText}
+                    </div>
+                </div>
+            `;
+            reliabilityListContainer.innerHTML += itemHTML;
+        });
+    }
+
+    reliabilityModalOverlay.style.display = 'flex';
+}
+
 // ---------------- ACTIVE BANNERS LISTENER ----------------
 
 function startActiveBannersListener() {
@@ -130,7 +247,7 @@ function startActiveBannersListener() {
   }, (error) => {
     console.error('Error listening to active banners:', error);
     if (activeBannersCountEl) {
-      activeBannersCountEl.textContent = 'Error';
+      activeBannersCountEl.textContent = 'Err';
     }
   });
 }
@@ -242,7 +359,7 @@ function updateCriticalAlerts() {
   }).join('');
 }
 
-// ---------------- PENDING APPROVALS ----------------
+// ---------------- PENDING APPROVALS (Bottom List Panel) ----------------
 
 function loadPendingApprovals() {
   if (!pendingListEl) return;
@@ -252,7 +369,7 @@ function loadPendingApprovals() {
   onSnapshot(pendingRef, (snapshot) => {
     pendingListEl.innerHTML = '';
 
-    // Update the count in the stat box
+    // If you still have the count element somewhere else (or if it wasn't replaced in HTML)
     if (pendingApprovalsCountEl) {
       pendingApprovalsCountEl.textContent = snapshot.size;
     }
@@ -522,10 +639,10 @@ function initDashboard() {
   const admin = checkAuth();
   if (!admin) return;
   
-  startBusStatusListener();
+  startBusStatusListener(); // Handless Fleet Count & Reliability
   startComplaintsListener();
-  startActiveBannersListener(); // NEW: Start active banners listener
-  loadPendingApprovals();
+  startActiveBannersListener();
+  loadPendingApprovals(); // Handles the Bottom Panel List
   initRecentNotificationsWidget();
 }
 

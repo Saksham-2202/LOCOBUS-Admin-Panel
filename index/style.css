@@ -638,3 +638,50 @@ body {
   margin:0 0 12px 0; 
   font-size:18px; 
 }
+
+/* Add this to your existing CSS */
+
+/* Make the specific stat box look interactive */
+.stat-box.clickable {
+  cursor: pointer;
+  transition: all 0.2s ease;
+  border: 1px solid transparent;
+}
+
+.stat-box.clickable:hover {
+  border-color: #0033cc;
+  background-color: #f8faff;
+  transform: translateY(-2px);
+  box-shadow: 0 6px 12px rgba(0,51,204,0.1);
+}
+
+/* "View Details" hint inside the box */
+.click-hint {
+  position: absolute;
+  bottom: 15px;
+  right: 15px;
+  font-size: 11px;
+  color: #0033cc;
+  opacity: 0;
+  transition: opacity 0.2s;
+  font-weight: 600;
+}
+
+.stat-box.clickable:hover .click-hint {
+  opacity: 1;
+}
+
+/* Modal Scrollbar styling for cleanliness */
+#reliabilityListContainer::-webkit-scrollbar {
+  width: 6px;
+}
+#reliabilityListContainer::-webkit-scrollbar-track {
+  background: #f1f1f1;
+}
+#reliabilityListContainer::-webkit-scrollbar-thumb {
+  background: #ccc;
+  border-radius: 3px;
+}
+#reliabilityListContainer::-webkit-scrollbar-thumb:hover {
+  background: #999;
+}
