@@ -16,8 +16,18 @@ body { background:#f6f8fb; color:#111; }
   border-radius: 12px;
 }
 
-.brand { font-weight:700; font-size:20px; margin-bottom:6px; }
-
+.brand { 
+  font-weight: 700; 
+  font-size: 20px; 
+  margin-bottom: 12px;
+  display: flex;
+  align-items: center;
+  gap: 8px; 
+}
+.bus-logo {
+  width: 50px;   /* change size if you want bigger/smaller */
+  height: 43px;
+}
 .menu {
   display: flex;
   flex-direction: column;

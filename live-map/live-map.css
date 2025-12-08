@@ -31,9 +31,16 @@ html,body {
 }
 
 .brand { 
-  font-weight: 650; 
-  font-size: 21.5px; 
-  margin-bottom: 6px; 
+  font-weight: 700; 
+  font-size: 20px; 
+  margin-bottom: 12px;
+  display: flex;
+  align-items: center;
+  gap: 8px; 
+}
+.bus-logo {
+  width: 50px;   /* change size if you want bigger/smaller */
+  height: 43px;
 }
 
 .menu {

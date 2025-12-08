@@ -4,566 +4,136 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Admin - Bulk Route Upload</title>
-    <style>
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-        }
-
-        body {
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            background: linear-gradient(135deg, #022D68 0%, #5A728E 50%, #ffffff 100%);
-            min-height: 100vh;
-            padding: 20px;
-        }
-
-        .container {
-            max-width: 1200px;
-            margin: 0 auto;
-            background: white;
-            border-radius: 20px;
-            box-shadow: 0 10px 40px rgba(0,0,0,0.2);
-            overflow: hidden;
-        }
-
-        .header {
-            background: linear-gradient(135deg, #022D68, #0d47a1);
-            color: white;
-            padding: 30px;
-            text-align: center;
-        }
-
-        .header h1 {
-            font-size: 28px;
-            margin-bottom: 10px;
-        }
-
-        .header p {
-            opacity: 0.9;
-            font-size: 14px;
-        }
-
-        .content {
-            padding: 30px;
-        }
-
-        .upload-section {
-            background: #f8f9fa;
-            border: 2px dashed #022D68;
-            border-radius: 15px;
-            padding: 40px;
-            text-align: center;
-            margin-bottom: 30px;
-            transition: all 0.3s;
-        }
-
-        .upload-section:hover {
-            border-color: #0d47a1;
-            background: #e3f2fd;
-        }
-
-        .upload-section input[type="file"] {
-            display: none;
-        }
-
-        .upload-btn {
-            background: #022D68;
-            color: white;
-            padding: 15px 40px;
-            border: none;
-            border-radius: 10px;
-            font-size: 16px;
-            cursor: pointer;
-            display: inline-flex;
-            align-items: center;
-            gap: 10px;
-            transition: all 0.3s;
-        }
-
-        .upload-btn:hover {
-            background: #0d47a1;
-            transform: translateY(-2px);
-            box-shadow: 0 5px 15px rgba(2, 45, 104, 0.3);
-        }
-
-        .template-section {
-            background: #fff3cd;
-            border-left: 4px solid #ffc107;
-            padding: 20px;
-            border-radius: 10px;
-            margin-bottom: 30px;
-        }
-
-        .template-section h3 {
-            color: #856404;
-            margin-bottom: 10px;
-        }
-
-        .download-template-btn {
-            background: #ffc107;
-            color: #000;
-            padding: 10px 25px;
-            border: none;
-            border-radius: 8px;
-            cursor: pointer;
-            font-weight: 600;
-            transition: all 0.3s;
-        }
-
-        .download-template-btn:hover {
-            background: #ffca28;
-            transform: translateY(-2px);
-        }
-
-        .progress-section {
-            display: none;
-            margin-top: 30px;
-        }
-
-        .progress-bar-container {
-            background: #e0e0e0;
-            border-radius: 10px;
-            height: 30px;
-            overflow: hidden;
-            margin-bottom: 15px;
-        }
-
-        .progress-bar {
-            height: 100%;
-            background: linear-gradient(90deg, #4caf50, #8bc34a);
-            width: 0%;
-            transition: width 0.3s;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            color: white;
-            font-weight: bold;
-        }
-
-        .status-log {
-            background: #f5f5f5;
-            border-radius: 10px;
-            padding: 20px;
-            max-height: 400px;
-            overflow-y: auto;
-            font-family: 'Courier New', monospace;
-            font-size: 13px;
-        }
-
-        .status-item {
-            padding: 8px;
-            margin-bottom: 5px;
-            border-radius: 5px;
-            display: flex;
-            align-items: center;
-            gap: 10px;
-        }
-
-        .status-item.success {
-            background: #d4edda;
-            color: #155724;
-        }
-
-        .status-item.error {
-            background: #f8d7da;
-            color: #721c24;
-        }
-
-        .status-item.info {
-            background: #d1ecf1;
-            color: #0c5460;
-        }
-
-        .status-item.warning {
-            background: #fff3cd;
-            color: #856404;
-        }
-
-        .preview-table {
-            width: 100%;
-            border-collapse: collapse;
-            margin-top: 20px;
-            display: none;
-        }
-
-        .preview-table th,
-        .preview-table td {
-            border: 1px solid #ddd;
-            padding: 12px;
-            text-align: left;
-        }
-
-        .preview-table th {
-            background: #022D68;
-            color: white;
-            font-weight: 600;
-        }
-
-        .preview-table tr:nth-child(even) {
-            background: #f8f9fa;
-        }
-
-        .action-buttons {
-            display: none;
-            gap: 15px;
-            margin-top: 20px;
-            justify-content: center;
-        }
-
-        .btn {
-            padding: 12px 30px;
-            border: none;
-            border-radius: 8px;
-            font-size: 16px;
-            cursor: pointer;
-            transition: all 0.3s;
-            font-weight: 600;
-        }
-
-        .btn-primary {
-            background: #4caf50;
-            color: white;
-        }
-
-        .btn-primary:hover {
-            background: #45a049;
-            transform: translateY(-2px);
-        }
-
-        .btn-secondary {
-            background: #6c757d;
-            color: white;
-        }
-
-        .btn-secondary:hover {
-            background: #5a6268;
-        }
-
-        .icon {
-            display: inline-block;
-            width: 20px;
-            height: 20px;
-        }
-
-        .spinner {
-            border: 3px solid #f3f3f3;
-            border-top: 3px solid #022D68;
-            border-radius: 50%;
-            width: 20px;
-            height: 20px;
-            animation: spin 1s linear infinite;
-            display: inline-block;
-        }
-
-        @keyframes spin {
-            0% { transform: rotate(0deg); }
-            100% { transform: rotate(360deg); }
-        }
-    </style>
+    <link rel="stylesheet" href="addroute.css"/>
 </head>
 <body>
-    <div class="container">
-        <div class="header">
-            <h1>🚌 Bulk Route Upload System</h1>
-            <p>Import multiple bus routes from Excel/CSV with automatic geocoding</p>
-        </div>
+ <div class="layout">
+    <aside class="sidebar">
+      <div class="brand">
+        <span>LOCO BUS</span>
+      <div id="busLogoAnim" class="bus-logo"></div>
+      </div>  
+      <nav class="menu">
+        <a class="menu-item" href="../index/index.html">Dashboard</a>
+        <a class="menu-item" href="../live-map/live-map.html">Live Map</a>
+        <a class="menu-item" href="../fleet/fleet.html">Fleet Management</a>
+        <a class="menu-item" href="../broadCasts/broadCasts.html">Broadcasts</a>
+        <a class="menu-item" href="../notifications/notifications.html">Notifications</a>
+        <a class="menu-item" href="../index/createBus.html">Account Panel</a>
+        <a class="menu-item" href="../help desk/helpDesk.html">Help Desk</a>
+         <a class="menu-item active" href="../live-map/addroute.html">Add route</a>
+        <a class="menu-item" href="../settings/settings.html">Settings</a>
+     
+      </nav>
 
-        <div class="content">
-            <!-- Template Download Section -->
-            <div class="template-section">
-                <h3>📋 Step 1: Download Excel Template</h3>
-                <p style="margin: 10px 0; color: #856404;">Download the template, fill in your route data, then upload it below.</p>
-                <button class="download-template-btn" onclick="downloadTemplate()">
-                    ⬇️ Download Excel Template
-                </button>
-            </div>
+      <div class="admin-profile">
+        <img src="admin img.png" class="admin-icon" alt="Admin" />
+        <span id="adminName">ADMIN_33</span>
+      </div>
+    </aside>
 
-            <!-- Upload Section -->
-            <div class="upload-section">
-                <h2 style="margin-bottom: 20px; color: #022D68;">📤 Step 2: Upload Your File</h2>
-                <input type="file" id="fileInput" accept=".csv,.xlsx,.xls" onchange="handleFileSelect(event)">
-                <label for="fileInput">
-                    <div class="upload-btn">
-                        <span>📁 Choose Excel/CSV File</span>
-                    </div>
-                </label>
-                <p style="margin-top: 15px; color: #666; font-size: 14px;">
-                    Supported formats: .xlsx, .xls, .csv
-                </p>
-            </div>
-
-            <!-- Preview Table -->
-            <div id="previewSection">
-                <h3 style="color: #022D68; margin-bottom: 15px;">📊 Data Preview</h3>
-                <table class="preview-table" id="previewTable">
-                    <thead>
-                        <tr>
-                            <th>Route Number</th>
-                            <th>From</th>
-                            <th>To</th>
-                            <th>Distance (km)</th>
-                            <th>Fare (₹)</th>
-                        </tr>
-                    </thead>
-                    <tbody id="previewBody"></tbody>
-                </table>
-            </div>
-
-            <!-- Action Buttons -->
-            <div class="action-buttons" id="actionButtons">
-                <button class="btn btn-primary" onclick="processAndUpload()">
-                    ✅ Process & Upload Routes
-                </button>
-                <button class="btn btn-secondary" onclick="resetUpload()">
-                    🔄 Cancel
-                </button>
-            </div>
-
-            <!-- Progress Section -->
-            <div class="progress-section" id="progressSection">
-                <h3 style="color: #022D68; margin-bottom: 15px;">⚙️ Processing Routes...</h3>
-                <div class="progress-bar-container">
-                    <div class="progress-bar" id="progressBar">0%</div>
+        <!-- Main Content -->
+        <main class="main-content">
+            <div class="page-header">
+                <div>
+                    <h1>Bulk Route Upload System</h1>
+                    <p class="subtitle">Import multiple bus routes from Excel/CSV with automatic geocoding</p>
                 </div>
-                <div class="status-log" id="statusLog"></div>
             </div>
-        </div>
+
+            <div class="content-wrapper">
+                <!-- Template Download Card -->
+                <div class="card template-card">
+                    <div class="card-header">
+                        <span class="card-icon">📋</span>
+                        <h3>Step 1: Download Excel Template</h3>
+                    </div>
+                    <div class="card-body">
+                        <p class="card-description">Download the template, fill in your route data, then upload it below.</p>
+                        <button class="btn-download" onclick="downloadTemplate()">
+                            <span>⬇️</span>
+                            Download Excel Template
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Upload Card -->
+                <div class="card upload-card">
+                    <div class="card-header">
+                        <span class="card-icon">📤</span>
+                        <h3>Step 2: Upload Your File</h3>
+                    </div>
+                    <div class="card-body">
+                        <div class="upload-zone">
+                            <input type="file" id="fileInput" accept=".csv,.xlsx,.xls" onchange="handleFileSelect(event)">
+                            <label for="fileInput" class="upload-label">
+                                <div class="upload-content">
+                                    <span class="upload-icon">📁</span>
+                                    <span class="upload-text">Choose Excel/CSV File</span>
+                                    <span class="upload-hint">Supported formats: .xlsx, .xls, .csv</span>
+                                </div>
+                            </label>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Preview Section -->
+                <div class="card preview-card" id="previewSection" style="display: none;">
+                    <div class="card-header">
+                        <span class="card-icon">📊</span>
+                        <h3>Data Preview</h3>
+                    </div>
+                    <div class="card-body">
+                        <div class="table-wrapper">
+                            <table class="preview-table" id="previewTable">
+                                <thead>
+                                    <tr>
+                                        <th>Route Number</th>
+                                        <th>From</th>
+                                        <th>To</th>
+                                        <th>Distance (km)</th>
+                                        <th>Fare (₹)</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="previewBody"></tbody>
+                            </table>
+                        </div>
+
+                        <!-- Action Buttons -->
+                        <div class="action-buttons" id="actionButtons">
+                            <button class="btn btn-primary" onclick="processAndUpload()">
+                                <span>✅</span>
+                                Process & Upload Routes
+                            </button>
+                            <button class="btn btn-secondary" onclick="resetUpload()">
+                                <span>🔄</span>
+                                Cancel
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Progress Section -->
+                <div class="card progress-card" id="progressSection" style="display: none;">
+                    <div class="card-header">
+                        <span class="card-icon">⚙️</span>
+                        <h3>Processing Routes...</h3>
+                    </div>
+                    <div class="card-body">
+                        <div class="progress-bar-container">
+                            <div class="progress-bar" id="progressBar">
+                                <span>0%</span>
+                            </div>
+                        </div>
+                        <div class="status-log" id="statusLog"></div>
+                    </div>
+                </div>
+            </div>
+        </main>
     </div>
 
-    <!-- Firebase SDK -->
-    <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore-compat.js"></script>
-    
-    <!-- SheetJS for Excel parsing -->
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
-
-    <script>
-        // Firebase Configuration
-        const firebaseConfig = {
-            apiKey: "AIzaSyCRtx7Oyda48Hz0eu-BiNrGYiK3_36Vl-c",
-            authDomain: "locobus-e4274.firebaseapp.com",
-            projectId: "locobus-e4274",
-            storageBucket: "locobus-e4274.firebasestorage.app",
-            messagingSenderId: "296482389648",
-            appId: "1:296482389648:web:1827bd92dc55c8a857e215"
-        };
-
-        firebase.initializeApp(firebaseConfig);
-        const db = firebase.firestore();
-
-        let parsedData = [];
-
-        // Download Template Function
-        function downloadTemplate() {
-            const template = [
-                ['route_number', 'from', 'to', 'distance_km', 'fare', 'stops'],
-                ['101', 'Garhshankar Bus Stand', 'Hoshiarpur', '35', '50', 'Stop1,Stop2,Stop3'],
-                ['102', 'Jalandhar City', 'Ludhiana', '75', '80', 'Stop4,Stop5,Stop6'],
-                ['103', 'Chandigarh ISBT', 'Mohali', '15', '25', 'Stop7,Stop8']
-            ];
-
-            const ws = XLSX.utils.aoa_to_sheet(template);
-            const wb = XLSX.utils.book_new();
-            XLSX.utils.book_append_sheet(wb, ws, "Routes Template");
-            XLSX.writeFile(wb, "bus_routes_template.xlsx");
-            
-            addLog('Template downloaded successfully!', 'success');
-        }
-
-        // Handle File Selection
-        function handleFileSelect(event) {
-            const file = event.target.files[0];
-            if (!file) return;
-
-            addLog(`Reading file: ${file.name}`, 'info');
-
-            const reader = new FileReader();
-            reader.onload = function(e) {
-                try {
-                    const data = new Uint8Array(e.target.result);
-                    const workbook = XLSX.read(data, { type: 'array' });
-                    const firstSheet = workbook.Sheets[workbook.SheetNames[0]];
-                    const jsonData = XLSX.utils.sheet_to_json(firstSheet);
-
-                    if (jsonData.length === 0) {
-                        addLog('Error: File is empty or invalid format', 'error');
-                        return;
-                    }
-
-                    parsedData = jsonData;
-                    displayPreview(jsonData);
-                    addLog(`✅ Successfully parsed ${jsonData.length} routes`, 'success');
-                } catch (error) {
-                    addLog(`Error parsing file: ${error.message}`, 'error');
-                }
-            };
-            reader.readAsArrayBuffer(file);
-        }
-
-        // Display Preview
-        function displayPreview(data) {
-            const previewTable = document.getElementById('previewTable');
-            const previewBody = document.getElementById('previewBody');
-            const actionButtons = document.getElementById('actionButtons');
-
-            previewBody.innerHTML = '';
-            
-            data.slice(0, 5).forEach(row => {
-                const tr = document.createElement('tr');
-                tr.innerHTML = `
-                    <td>${row.route_number || 'N/A'}</td>
-                    <td>${row.from || 'N/A'}</td>
-                    <td>${row.to || 'N/A'}</td>
-                    <td>${row.distance_km || 'N/A'}</td>
-                    <td>${row.fare || 'N/A'}</td>
-                `;
-                previewBody.appendChild(tr);
-            });
-
-            if (data.length > 5) {
-                const tr = document.createElement('tr');
-                tr.innerHTML = `<td colspan="5" style="text-align: center; color: #666; font-style: italic;">... and ${data.length - 5} more routes</td>`;
-                previewBody.appendChild(tr);
-            }
-
-            previewTable.style.display = 'table';
-            actionButtons.style.display = 'flex';
-        }
-
-        // Geocode Location using OpenRouteService
-        async function geocodeLocation(locationName) {
-            const apiKey = 'eyJvcmciOiI1YjNjZTM1OTc4NTExMTAwMDFjZjYyNDgiLCJpZCI6ImMzMzllNDZlMGQ2ZjQ4ZDk5N2I1NTVmZjNhOTk0NWM1IiwiaCI6Im11cm11cjY0In0='; // You need to get this from openrouteservice.org
-            
-            try {
-                // Add "Punjab, India" for better accuracy
-                const query = `${locationName}, Punjab, India`;
-                const url = `https://api.openrouteservice.org/geocode/search?api_key=${apiKey}&text=${encodeURIComponent(query)}&size=1`;
-                
-                const response = await fetch(url);
-                if (!response.ok) throw new Error('Geocoding failed');
-                
-                const data = await response.json();
-                
-                if (data.features && data.features.length > 0) {
-                    const coords = data.features[0].geometry.coordinates;
-                    return {
-                        latitude: coords[1],
-                        longitude: coords[0],
-                        success: true
-                    };
-                }
-                
-                return { success: false, error: 'Location not found' };
-            } catch (error) {
-                return { success: false, error: error.message };
-            }
-        }
-
-        // Process and Upload Routes
-        async function processAndUpload() {
-            const progressSection = document.getElementById('progressSection');
-            const progressBar = document.getElementById('progressBar');
-            const actionButtons = document.getElementById('actionButtons');
-            
-            progressSection.style.display = 'block';
-            actionButtons.style.display = 'none';
-            
-            addLog('🚀 Starting route processing...', 'info');
-
-            let successCount = 0;
-            let errorCount = 0;
-
-            for (let i = 0; i < parsedData.length; i++) {
-                const route = parsedData[i];
-                const progress = Math.round(((i + 1) / parsedData.length) * 100);
-                progressBar.style.width = progress + '%';
-                progressBar.textContent = progress + '%';
-
-                addLog(`Processing Route ${i + 1}/${parsedData.length}: ${route.from} → ${route.to}`, 'info');
-
-                try {
-                    // Geocode start location
-                    addLog(`  Geocoding: ${route.from}...`, 'info');
-                    const startGeo = await geocodeLocation(route.from);
-                    
-                    if (!startGeo.success) {
-                        throw new Error(`Failed to geocode start location: ${route.from}`);
-                    }
-
-                    // Geocode end location
-                    addLog(`  Geocoding: ${route.to}...`, 'info');
-                    const endGeo = await geocodeLocation(route.to);
-                    
-                    if (!endGeo.success) {
-                        throw new Error(`Failed to geocode end location: ${route.to}`);
-                    }
-
-                    // Prepare route data
-                    const routeData = {
-                        route_number: route.route_number || `Route-${i + 1}`,
-                        from: route.from,
-                        to: route.to,
-                        start_lat: startGeo.latitude,
-                        start_lng: startGeo.longitude,
-                        end_lat: endGeo.latitude,
-                        end_lng: endGeo.longitude,
-                        distance_km: parseFloat(route.distance_km) || 0,
-                        fare: parseFloat(route.fare) || 0,
-                        status: 'active',
-                        created_at: firebase.firestore.FieldValue.serverTimestamp(),
-                        uploaded_by: 'admin',
-                        upload_method: 'bulk_import'
-                    };
-
-                    // Save to Firestore
-                    await db.collection('bus_routes').add(routeData);
-
-                    addLog(`  ✅ Route saved successfully!`, 'success');
-                    successCount++;
-
-                    // Small delay to avoid rate limiting
-                    await new Promise(resolve => setTimeout(resolve, 1000));
-
-                } catch (error) {
-                    addLog(`  ❌ Error: ${error.message}`, 'error');
-                    errorCount++;
-                }
-            }
-
-            addLog(`\n🎉 Upload Complete!`, 'success');
-            addLog(`✅ Successfully uploaded: ${successCount} routes`, 'success');
-            if (errorCount > 0) {
-                addLog(`❌ Failed: ${errorCount} routes`, 'error');
-            }
-
-            progressBar.style.background = 'linear-gradient(90deg, #4caf50, #66bb6a)';
-        }
-
-        // Add Log Entry
-        function addLog(message, type = 'info') {
-            const statusLog = document.getElementById('statusLog');
-            const logItem = document.createElement('div');
-            logItem.className = `status-item ${type}`;
-            
-            const icon = type === 'success' ? '✅' : 
-                        type === 'error' ? '❌' : 
-                        type === 'warning' ? '⚠️' : 'ℹ️';
-            
-            logItem.innerHTML = `<span>${icon}</span><span>${message}</span>`;
-            statusLog.appendChild(logItem);
-            statusLog.scrollTop = statusLog.scrollHeight;
-        }
-
-        // Reset Upload
-        function resetUpload() {
-            document.getElementById('fileInput').value = '';
-            document.getElementById('previewTable').style.display = 'none';
-            document.getElementById('actionButtons').style.display = 'none';
-            document.getElementById('progressSection').style.display = 'none';
-            document.getElementById('statusLog').innerHTML = '';
-            parsedData = [];
-        }
-    </script>
+    <!-- Lottie Player for Bus Animation -->
+      <script src="https://cdnjs.cloudflare.com/ajax/libs/bodymovin/5.12.2/lottie.min.js"></script>
+    <script type="module" src="addroute.js"></script>
 </body>
 </html>

@@ -189,3 +189,16 @@ document.addEventListener('DOMContentLoaded', () => {
     localStorage.setItem('settings_demo', JSON.stringify(s));
   }
 });
+// Lottie bus logo animation
+document.addEventListener('DOMContentLoaded', () => {
+  const logoContainer = document.getElementById('busLogoAnim');
+  if (logoContainer && window.lottie) {
+    window.lottie.loadAnimation({
+      container: logoContainer,
+      renderer: 'svg',
+      loop: true,
+      autoplay: true,
+      path: '../index/Bus_carga_trackMile.json'  // <-- put your real path here
+    });
+  }
+});
