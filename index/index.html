@@ -23,7 +23,7 @@
       </nav>
 
       <div class="admin-profile">
-        <img src="admin img.png" class="admin-icon" />
+        <img src="admin img.png" class="admin-icon" alt="Admin" />
         <span id="adminName">ADMIN_33</span>
       </div>
     </aside>
@@ -35,7 +35,6 @@
         <a class="menu-item logout-btn" href="#" id="logoutBtn">Logout</a>
       </header>
 
-      <!-- Stats Row -->
       <section class="stats-row">
         <div class="stat-box">
           <h3>Active Fleet</h3>
@@ -63,15 +62,78 @@
           <p class="label">Unresolved Complaints</p>
         </div>
 
-        <div class="stat-box">
-          <h3>Active Banners</h3>
-          <p class="value"><span id="activeBannersCount">--</span></p>
-          <p class="label">Promotional Ads</p>
+        <div class="stat-box clickable" id="crowdBox">
+          <h3>Passenger Comfort</h3>
+          <p class="value"><span id="avgComfort">--</span>%</p>
+          <p class="label">Avg Not Crowded</p>
+          <div class="click-hint">View Details ➝</div>
         </div>
-
       </section>
 
-<div id="reliabilityModalOverlay" class="notif-overlay" aria-hidden="true">
+      <section class="panel-row">
+        <div class="panel">
+          <div class="panel-header">
+            <h3>Pending Approvals</h3>
+            <button>Check All</button>
+          </div>
+          <div class="list" id="pendingList">
+            <div class="list empty">Loading requests...</div>
+          </div>
+        </div>
+
+        <div class="panel">
+          <div class="panel-header">
+            <h3>Critical Alerts</h3>
+            <button>Check All</button>
+          </div>
+          <div class="list" id="criticalAlertsList">
+            <div class="list empty">Loading alerts...</div>
+          </div>
+        </div>
+      </section>
+
+      <aside class="card recent-card">
+        <div class="recent-header">
+          <h3>Recent Notifications</h3>
+          <div class="filter-tabs">
+            <button class="filter-tab active" data-filter="all">All</button>
+            <button class="filter-tab" data-filter="conductors">Conductors</button>
+            <button class="filter-tab" data-filter="users">Users</button>
+          </div>
+        </div>
+        <div id="recentList" class="recent-list">
+          <div style="padding:20px; text-align:center; color:#999;">Loading notifications...</div>
+        </div>
+      </aside>
+    </main>
+  </div>
+
+  <div id="notifModalOverlay" class="notif-overlay" aria-hidden="true">
+    <div class="notif-modal" role="dialog" aria-labelledby="notifTitle">
+      <header class="nm-header">
+        <h3 id="notifTitle">Notification Details</h3>
+        <button id="notifClose" class="nm-close" aria-label="Close">✕</button>
+      </header>
+      <div class="nm-body">
+        <div class="nm-row"><div class="nm-label">Title</div><div id="nmTitle" class="nm-value"></div></div>
+        <div class="nm-row"><div class="nm-label">Message</div><div id="nmMessage" class="nm-value"></div></div>
+        <div class="nm-flex">
+          <div class="nm-col">
+            <div class="nm-label">Target Audience</div>
+            <div id="nmAudience" class="nm-value"></div>
+          </div>
+          <div class="nm-col">
+            <div class="nm-label">Status</div>
+            <div id="nmStatus" class="nm-value"></div>
+          </div>
+        </div>
+        <div class="nm-row"><div class="nm-label">Sent Date & Time</div><div id="nmDate" class="nm-value"></div></div>
+        <div class="nm-row"><div class="nm-label">Expires At</div><div id="nmExpiry" class="nm-value"></div></div>
+      </div>
+    </div>
+  </div>
+
+  <div id="reliabilityModalOverlay" class="notif-overlay" aria-hidden="true">
     <div class="notif-modal" role="dialog">
       <header class="nm-header">
         <h3>Bus On-Time Performance</h3>
@@ -88,78 +150,25 @@
       </div>
     </div>
   </div>
-       
 
-      </section>
-
-      <!-- Pending & Alerts -->
-      <section class="panel-row">
-        <div class="panel">
-          <div class="panel-header">
-            <h3>Pending Approvals</h3>
-            <button>Check All</button>
-          </div>
-          <div class="list" id="pendingList">
-            <div class="list empty">Loading requests...</div>
-          </div>
-        </div>
-
-        <div class="panel">
-        <div class="panel-header">
-        <h3>Critical Alerts</h3>
-      <button>Check All</button>
-    </div>
-<!-- list for critical alerts -->
-    <div class="list" id="criticalAlertsList">
-    <div class="list empty">Loading alerts...</div>
-     </div>
-      </div>
-      </section>
-
-        <aside class="card recent-card">
-          <div class="recent-header">
-            <h3>Recent Notifications</h3>
-            <div class="filter-tabs">
-              <button class="filter-tab active" data-filter="all">All</button>
-              <button class="filter-tab" data-filter="conductors">Conductors</button>
-              <button class="filter-tab" data-filter="users">Users</button>
-            </div>
-          </div>
-          <div id="recentList" class="recent-list">
-            <div style="padding:20px; text-align:center; color:#999;">Loading notifications...</div>
-          </div>
-        </aside>
-      </div>
-    </main>
-  </div>
-
-  <div id="notifModalOverlay" class="notif-overlay" aria-hidden="true">
-    <div class="notif-modal" role="dialog" aria-labelledby="notifTitle">
+  <div id="crowdModalOverlay" class="notif-overlay" aria-hidden="true">
+    <div class="notif-modal" role="dialog">
       <header class="nm-header">
-        <h3 id="notifTitle">Notification Details</h3>
-        <button id="notifClose" class="nm-close" aria-label="Close">✕</button>
+        <h3>Bus Crowd Levels</h3>
+        <button id="crowdClose" class="nm-close">✕</button>
       </header>
-
       <div class="nm-body">
-        <div class="nm-row"><div class="nm-label">Title</div><div id="nmTitle" class="nm-value"></div></div>
-        <div class="nm-row"><div class="nm-label">Message</div><div id="nmMessage" class="nm-value"></div></div>
-
-        <div class="nm-flex">
-          <div class="nm-col">
-            <div class="nm-label">Target Audience</div>
-            <div id="nmAudience" class="nm-value"></div>
-          </div>
-          <div class="nm-col">
-            <div class="nm-label">Status</div>
-            <div id="nmStatus" class="nm-value"></div>
-          </div>
+        <div class="list-header" style="display:flex; justify-content:space-between; padding-bottom:10px; border-bottom:1px solid #eee; margin-bottom:10px; font-weight:bold; color:#666;">
+            <span>Bus Number</span>
+            <span>Comfort Score</span>
         </div>
-
-        <div class="nm-row"><div class="nm-label">Sent Date & Time</div><div id="nmDate" class="nm-value"></div></div>
-        <div class="nm-row"><div class="nm-label">Expires At</div><div id="nmExpiry" class="nm-value"></div></div>
+        <div id="crowdListContainer" style="max-height: 300px; overflow-y: auto;">
+            <div style="text-align:center; color:#999;">Loading...</div>
+        </div>
       </div>
     </div>
   </div>
+  
   <script type="module" src="script.js"></script>
 </body>
 </html>
