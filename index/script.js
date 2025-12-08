@@ -39,6 +39,8 @@ const logoutBtn = document.getElementById('logoutBtn');
 const adminNameEl = document.getElementById('adminName');
 const pendingListEl = document.getElementById('pendingList');
 const complaintsCountEl = document.getElementById('complaintsCount');
+const pendingApprovalsCountEl = document.getElementById('pendingApprovalsCount');
+const activeBannersCountEl = document.getElementById('activeBannersCount');
 
 // State for complaints tracking
 let allComplaints = [];
@@ -111,6 +113,28 @@ function flashUpdateIndicator() {
   }
 }
 
+// ---------------- ACTIVE BANNERS LISTENER ----------------
+
+function startActiveBannersListener() {
+  if (!activeBannersCountEl) return;
+
+  // Query only active banners
+  const activeBannersQuery = query(
+    collection(db, 'advertisements'),
+    where('active', '==', true)
+  );
+
+  onSnapshot(activeBannersQuery, (snapshot) => {
+    const activeCount = snapshot.size;
+    activeBannersCountEl.textContent = activeCount;
+  }, (error) => {
+    console.error('Error listening to active banners:', error);
+    if (activeBannersCountEl) {
+      activeBannersCountEl.textContent = 'Error';
+    }
+  });
+}
+
 // ---------------- COMPLAINTS TRACKING ----------------
 
 function calculateActiveComplaintsByBus() {
@@ -152,6 +176,7 @@ function startComplaintsListener() {
     console.error('Error listening to complaints:', error);
   });
 }
+
 function updateCriticalAlerts() {
   const criticalAlertsPanel = document.getElementById('criticalAlertsList');
   if (!criticalAlertsPanel) return;
@@ -226,6 +251,11 @@ function loadPendingApprovals() {
 
   onSnapshot(pendingRef, (snapshot) => {
     pendingListEl.innerHTML = '';
+
+    // Update the count in the stat box
+    if (pendingApprovalsCountEl) {
+      pendingApprovalsCountEl.textContent = snapshot.size;
+    }
 
     if (snapshot.empty) {
       pendingListEl.innerHTML = `
@@ -363,7 +393,7 @@ function initRecentNotificationsWidget() {
 
   function clearListeners() {
     if (unsubConductors) { unsubConductors(); unsubConductors = null; }
-    if (unsubUsers) { unsubUsers(); unsubUsers = null; }``
+    if (unsubUsers) { unsubUsers(); unsubUsers = null; }
     if (unsubSingle) { unsubSingle(); unsubSingle = null; }
   }
 
@@ -493,7 +523,8 @@ function initDashboard() {
   if (!admin) return;
   
   startBusStatusListener();
-  startComplaintsListener(); // Added: Listen to complaints
+  startComplaintsListener();
+  startActiveBannersListener(); // NEW: Start active banners listener
   loadPendingApprovals();
   initRecentNotificationsWidget();
 }

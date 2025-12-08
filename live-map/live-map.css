@@ -103,14 +103,16 @@ html,body {
 
 /* ADMIN PROFILE FIXED AT BOTTOM */
 .admin-profile {
+    justify-content: center;
   margin-top:auto;
   padding-top:8px;
   border-top:1px solid #eee;
   display:flex;
   align-items:center;
   gap:10px;
-  font-weight:700;
+  font-weight:400;
   margin-bottom: 15px;
+  margin-right: 30px;
 }
 
 .admin-icon {

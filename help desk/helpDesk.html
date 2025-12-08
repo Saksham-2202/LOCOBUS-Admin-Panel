@@ -22,7 +22,7 @@
       </nav>
       <div class="admin-profile" id="adminProfile">
         <img src="../help desk/admin img.png" class="admin-icon" />
-        ADMIN_33
+        ADMIN2
       </div>
     </aside>
 
@@ -107,11 +107,90 @@
             </tbody>
           </table>
         </div>
+        
+        <!-- Pagination Controls -->
+        <div class="pagination-container">
+          <button id="prevBtn" class="pagination-btn" disabled>
+            <span>←</span> Previous
+          </button>
+          <div class="pagination-info">
+            Showing <span id="pageInfo">1-5</span> of <span id="totalComplaints">0</span>
+          </div>
+          <button id="nextBtn" class="pagination-btn" disabled>
+            Next <span>→</span>
+          </button>
+        </div>
+      </section>
+
+      <!-- NEW STOP REQUESTS SECTION -->
+      <section class="stop-requests-section">
+        <header class="section-header">
+          <div>
+            <h2>New Stop Requests</h2>
+            <p class="muted">Suggestions from users for missing stops</p>
+          </div>
+        </header>
+
+        <!-- Stop Requests Filters -->
+        <div class="stop-filters-card">
+          <input id="stopSearchInput" class="search-complaints" placeholder="Search requests..." />
+          <div class="filters-row">
+            <label>
+              Status
+              <select id="stopStatusFilter" class="filter">
+                <option value="all">All Status</option>
+                <option value="pending">Pending</option>
+                <option value="approved">Approved</option>
+                <option value="rejected">Rejected</option>
+              </select>
+            </label>
+          </div>
+        </div>
+
+        <!-- Stop Requests Table -->
+        <div class="table-card">
+          <div class="table-head">
+            <h3>Stop Requests <span class="muted">(<span id="stopRequestCount">0</span>)</span></h3>
+          </div>
+          <div class="table-wrap">
+            <table class="complaints-table">
+              <thead>
+                <tr>
+                  <th>REQUEST ID</th>
+                  <th>REQUESTED STOP NAME</th>
+                  <th>BETWEEN STOPS</th>
+                  <th>SUBMITTED BY</th>
+                  <th>DATE</th>
+                  <th>STATUS</th>
+                  <th>ACTION</th>
+                </tr>
+              </thead>
+              <tbody id="stopRequestsBody">
+                <tr>
+                  <td colspan="7" class="loading">Loading stop requests...</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+
+          <!-- Stop Requests Pagination -->
+          <div class="pagination-container">
+            <button id="stopPrevBtn" class="pagination-btn" disabled>
+              <span>←</span> Previous
+            </button>
+            <div class="pagination-info">
+              Showing <span id="stopPageInfo">1-5</span> of <span id="totalStopRequests">0</span>
+            </div>
+            <button id="stopNextBtn" class="pagination-btn" disabled>
+              Next <span>→</span>
+            </button>
+          </div>
+        </div>
       </section>
     </main>
   </div>
 
-  <!-- Detail Panel -->
+  <!-- Complaint Detail Panel -->
   <div id="detailPanel" class="detail-panel">
     <div class="detail-panel-card">
       <header class="dp-header">
@@ -172,6 +251,74 @@
           <button id="updateBtn" class="btn-update">Update</button>
         </div>
         <button id="solveBtn" class="btn-solve">✓ Mark as Solved</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Stop Request Detail Panel -->
+  <div id="stopDetailPanel" class="detail-panel">
+    <div class="detail-panel-card">
+      <header class="dp-header">
+        <div>
+          <h3 id="stopDetailId">Stop Request Details</h3>
+          <div class="dp-badges">
+            <span id="stopDetailStatus" class="status status-open">Pending</span>
+          </div>
+        </div>
+        <button id="closeStopPanel" class="dp-close">✕</button>
+      </header>
+
+      <div class="dp-section">
+        <h4 class="section-title">Request Details</h4>
+        <ul class="dp-list">
+          <li>
+            <strong>Requested Stop Name</strong>
+            <div class="value" id="stopDetailName">-</div>
+          </li>
+          <li>
+            <strong>Between Stops</strong>
+            <div class="value" id="stopDetailBetween">-</div>
+          </li>
+          <li>
+            <strong>Submitted By</strong>
+            <div class="value" id="stopDetailSubmitter">-</div>
+          </li>
+          <li>
+            <strong>Date Submitted</strong>
+            <div class="value" id="stopDetailDate">-</div>
+          </li>
+        </ul>
+      </div>
+
+      <div class="dp-section">
+        <h4 class="section-title">Location Information</h4>
+        <ul class="dp-list">
+          <li>
+            <strong>Coordinates</strong>
+            <div class="value" id="stopDetailCoords">-</div>
+          </li>
+        </ul>
+      </div>
+
+      <div class="dp-section">
+        <h4 class="section-title">Admin Notes</h4>
+        <textarea id="stopAdminNotesInput" class="admin-notes-input" placeholder="Add notes about this request..."></textarea>
+      </div>
+
+      <div class="dp-section dp-controls">
+        <label class="small" style="font-weight: 600; margin-bottom: 4px;">Update Status</label>
+        <div class="status-row">
+          <select id="stopStatusSelect">
+            <option value="pending">Pending</option>
+            <option value="approved">Approved</option>
+            <option value="rejected">Rejected</option>
+          </select>
+          <button id="stopUpdateBtn" class="btn-update">Update</button>
+        </div>
+        <div class="action-buttons-row">
+          <button id="approveBtn" class="btn-approve">✓ Approve</button>
+          <button id="rejectBtn" class="btn-reject">✕ Reject</button>
+        </div>
       </div>
     </div>
   </div>

@@ -1,4 +1,4 @@
-// complaints.js - Complaints Management System
+// helpDesk.js - Complaints & Stop Requests Management System
 
 import { initializeApp } from "https://www.gstatic.com/firebasejs/9.23.0/firebase-app.js";
 import { 
@@ -27,11 +27,18 @@ const firebaseConfig = {
 const app = initializeApp(firebaseConfig);
 const db = getFirestore(app);
 
+// ==================== COMPLAINTS SECTION ====================
+
+// Pagination State for Complaints
+const ITEMS_PER_PAGE = 5;
+let currentPage = 1;
+let filteredComplaints = [];
+
 // State
 let allComplaints = [];
 let currentComplaintId = null;
 
-// DOM Elements
+// DOM Elements - Complaints
 const tbody = document.getElementById('complaintsBody');
 const countEl = document.getElementById('complaintCount');
 const searchInput = document.getElementById('searchInput');
@@ -42,6 +49,12 @@ const detailPanel = document.getElementById('detailPanel');
 const closePanel = document.getElementById('closePanel');
 const alertBanner = document.getElementById('alertBanner');
 const alertList = document.getElementById('alertList');
+
+// Pagination Elements - Complaints
+const prevBtn = document.getElementById('prevBtn');
+const nextBtn = document.getElementById('nextBtn');
+const pageInfoEl = document.getElementById('pageInfo');
+const totalComplaintsEl = document.getElementById('totalComplaints');
 
 // Check Authentication
 function checkAuth() {
@@ -70,7 +83,6 @@ function checkAuth() {
 function calculateActiveComplaintsByBus() {
   const busStats = {};
   
-  // Only count complaints that are NOT solved
   allComplaints.forEach(complaint => {
     if (complaint.status !== 'solved') {
       const bus = complaint.busNumber;
@@ -93,7 +105,7 @@ function initComplaintsListener() {
     snapshot.forEach((doc) => {
       allComplaints.push({ id: doc.id, ...doc.data() });
     });
-    renderComplaints();
+    applyFiltersAndRender();
     updateAlertBanner();
   }, (error) => {
     console.error('Error listening to complaints:', error);
@@ -124,7 +136,7 @@ function updateAlertBanner() {
   }
 }
 
-// Filter Matching
+// Filter Matching - Complaints
 function matchesFilters(complaint) {
   const search = searchInput.value.toLowerCase().trim();
   const status = statusFilter.value;
@@ -143,20 +155,50 @@ function matchesFilters(complaint) {
   return true;
 }
 
-// Render Complaints Table
-function renderComplaints() {
-  const filtered = allComplaints.filter(matchesFilters);
-  countEl.textContent = filtered.length;
+// Apply Filters and Reset to Page 1
+function applyFiltersAndRender() {
+  filteredComplaints = allComplaints.filter(matchesFilters);
+  currentPage = 1;
+  renderComplaints();
+  updatePaginationControls();
+}
 
-  if (filtered.length === 0) {
+// Update Pagination Controls - Complaints
+function updatePaginationControls() {
+  const totalItems = filteredComplaints.length;
+  const totalPages = Math.ceil(totalItems / ITEMS_PER_PAGE);
+  
+  totalComplaintsEl.textContent = totalItems;
+  
+  const start = (currentPage - 1) * ITEMS_PER_PAGE + 1;
+  const end = Math.min(currentPage * ITEMS_PER_PAGE, totalItems);
+  
+  if (totalItems === 0) {
+    pageInfoEl.textContent = '0-0';
+  } else {
+    pageInfoEl.textContent = `${start}-${end}`;
+  }
+  
+  prevBtn.disabled = currentPage === 1;
+  nextBtn.disabled = currentPage >= totalPages || totalItems === 0;
+}
+
+// Render Complaints Table (Current Page)
+function renderComplaints() {
+  countEl.textContent = filteredComplaints.length;
+
+  if (filteredComplaints.length === 0) {
     tbody.innerHTML = '<tr><td colspan="8" style="text-align:center;padding:40px;color:#999;">No complaints found</td></tr>';
     return;
   }
 
-  // Calculate active complaints per bus for warning indicator
   const busComplaintStats = calculateActiveComplaintsByBus();
 
-  tbody.innerHTML = filtered.map(c => {
+  const startIndex = (currentPage - 1) * ITEMS_PER_PAGE;
+  const endIndex = startIndex + ITEMS_PER_PAGE;
+  const pageComplaints = filteredComplaints.slice(startIndex, endIndex);
+
+  tbody.innerHTML = pageComplaints.map(c => {
     const date = c.createdAt 
       ? new Date(c.createdAt.toDate()).toLocaleString('en-IN', {
           year: 'numeric',
@@ -168,8 +210,6 @@ function renderComplaints() {
       : '-';
     
     const route = `${c.from || '-'} → ${c.to || '-'}`;
-    
-    // Check if this bus has 5+ ACTIVE (unsolved) complaints
     const isHighComplaint = busComplaintStats[c.busNumber] >= 5;
     const shortId = c.id.substr(0, 8).toUpperCase();
 
@@ -194,6 +234,24 @@ function renderComplaints() {
     `;
   }).join('');
 }
+
+// Pagination Button Handlers - Complaints
+prevBtn.addEventListener('click', () => {
+  if (currentPage > 1) {
+    currentPage--;
+    renderComplaints();
+    updatePaginationControls();
+  }
+});
+
+nextBtn.addEventListener('click', () => {
+  const totalPages = Math.ceil(filteredComplaints.length / ITEMS_PER_PAGE);
+  if (currentPage < totalPages) {
+    currentPage++;
+    renderComplaints();
+    updatePaginationControls();
+  }
+});
 
 // Open Complaint Detail Panel
 window.openComplaintDetail = (id) => {
@@ -259,7 +317,6 @@ document.getElementById('updateBtn').addEventListener('click', async () => {
       updatedAt: Timestamp.now()
     };
 
-    // If marking as solved, add resolved flag and timestamp
     if (newStatus === 'solved') {
       updateData.resolved = true;
       updateData.resolvedAt = Timestamp.now();
@@ -297,16 +354,299 @@ document.getElementById('solveBtn').addEventListener('click', async () => {
   }
 });
 
-// Filter Event Listeners
+// Filter Event Listeners - Complaints
 [searchInput, statusFilter, priorityFilter, categoryFilter].forEach(el => {
-  el.addEventListener('input', renderComplaints);
-  el.addEventListener('change', renderComplaints);
+  el.addEventListener('input', applyFiltersAndRender);
+  el.addEventListener('change', applyFiltersAndRender);
 });
 
-// ESC Key to Close Panel
+// ==================== STOP REQUESTS SECTION ====================
+
+// Pagination State for Stop Requests
+let stopCurrentPage = 1;
+let filteredStopRequests = [];
+
+// State
+let allStopRequests = [];
+let currentStopRequestId = null;
+
+// DOM Elements - Stop Requests
+const stopRequestsBody = document.getElementById('stopRequestsBody');
+const stopRequestCountEl = document.getElementById('stopRequestCount');
+const stopSearchInput = document.getElementById('stopSearchInput');
+const stopStatusFilter = document.getElementById('stopStatusFilter');
+const stopDetailPanel = document.getElementById('stopDetailPanel');
+const closeStopPanel = document.getElementById('closeStopPanel');
+
+// Pagination Elements - Stop Requests
+const stopPrevBtn = document.getElementById('stopPrevBtn');
+const stopNextBtn = document.getElementById('stopNextBtn');
+const stopPageInfoEl = document.getElementById('stopPageInfo');
+const totalStopRequestsEl = document.getElementById('totalStopRequests');
+
+// Initialize Stop Requests Listener
+function initStopRequestsListener() {
+  const stopRequestsQuery = query(
+    collection(db, 'stopRequests'),
+    orderBy('createdAt', 'desc')
+  );
+
+  onSnapshot(stopRequestsQuery, (snapshot) => {
+    allStopRequests = [];
+    snapshot.forEach((doc) => {
+      allStopRequests.push({ id: doc.id, ...doc.data() });
+    });
+    applyStopFiltersAndRender();
+  }, (error) => {
+    console.error('Error listening to stop requests:', error);
+    stopRequestsBody.innerHTML = '<tr><td colspan="7" style="text-align:center;padding:40px;color:#f87171;">Error loading stop requests</td></tr>';
+  });
+}
+
+// Filter Matching - Stop Requests
+function matchesStopFilters(request) {
+  const search = stopSearchInput.value.toLowerCase().trim();
+  const status = stopStatusFilter.value;
+
+  if (search) {
+    const searchText = `${request.stopName || ''} ${request.betweenStops || ''} ${request.submittedBy || ''}`.toLowerCase();
+    if (!searchText.includes(search)) return false;
+  }
+
+  if (status !== 'all' && request.status !== status) return false;
+
+  return true;
+}
+
+// Apply Filters and Reset to Page 1 - Stop Requests
+function applyStopFiltersAndRender() {
+  filteredStopRequests = allStopRequests.filter(matchesStopFilters);
+  stopCurrentPage = 1;
+  renderStopRequests();
+  updateStopPaginationControls();
+}
+
+// Update Pagination Controls - Stop Requests
+function updateStopPaginationControls() {
+  const totalItems = filteredStopRequests.length;
+  const totalPages = Math.ceil(totalItems / ITEMS_PER_PAGE);
+  
+  totalStopRequestsEl.textContent = totalItems;
+  
+  const start = (stopCurrentPage - 1) * ITEMS_PER_PAGE + 1;
+  const end = Math.min(stopCurrentPage * ITEMS_PER_PAGE, totalItems);
+  
+  if (totalItems === 0) {
+    stopPageInfoEl.textContent = '0-0';
+  } else {
+    stopPageInfoEl.textContent = `${start}-${end}`;
+  }
+  
+  stopPrevBtn.disabled = stopCurrentPage === 1;
+  stopNextBtn.disabled = stopCurrentPage >= totalPages || totalItems === 0;
+}
+
+// Render Stop Requests Table
+function renderStopRequests() {
+  stopRequestCountEl.textContent = filteredStopRequests.length;
+
+  if (filteredStopRequests.length === 0) {
+    stopRequestsBody.innerHTML = '<tr><td colspan="7" style="text-align:center;padding:40px;color:#999;"><div style="font-size:48px;margin-bottom:12px;">📍</div>No stop requests found</td></tr>';
+    return;
+  }
+
+  const startIndex = (stopCurrentPage - 1) * ITEMS_PER_PAGE;
+  const endIndex = startIndex + ITEMS_PER_PAGE;
+  const pageRequests = filteredStopRequests.slice(startIndex, endIndex);
+
+  stopRequestsBody.innerHTML = pageRequests.map(r => {
+    const date = r.createdAt 
+      ? new Date(r.createdAt.toDate()).toLocaleString('en-IN', {
+          year: 'numeric',
+          month: 'short',
+          day: 'numeric'
+        })
+      : '-';
+    
+    const shortId = r.id.substr(0, 8).toUpperCase();
+    const submitter = r.isAnonymous ? 'Anonymous' : (r.userEmail || 'User');
+    const betweenStops = r.betweenStops || '-';
+
+    return `
+      <tr data-id="${r.id}">
+        <td><span style="font-family:monospace;font-size:12px;">#${shortId}</span></td>
+        <td><strong>${r.stopName || 'Unnamed Stop'}</strong></td>
+        <td>${betweenStops}</td>
+        <td>${submitter}</td>
+        <td>${date}</td>
+        <td><span class="status status-${r.status || 'pending'}">${r.status || 'pending'}</span></td>
+        <td class="action-col">
+          <button class="view-btn" onclick="window.openStopRequestDetail('${r.id}')" title="View Details">👁</button>
+        </td>
+      </tr>
+    `;
+  }).join('');
+}
+
+// Pagination Button Handlers - Stop Requests
+stopPrevBtn.addEventListener('click', () => {
+  if (stopCurrentPage > 1) {
+    stopCurrentPage--;
+    renderStopRequests();
+    updateStopPaginationControls();
+  }
+});
+
+stopNextBtn.addEventListener('click', () => {
+  const totalPages = Math.ceil(filteredStopRequests.length / ITEMS_PER_PAGE);
+  if (stopCurrentPage < totalPages) {
+    stopCurrentPage++;
+    renderStopRequests();
+    updateStopPaginationControls();
+  }
+});
+
+// Open Stop Request Detail Panel
+window.openStopRequestDetail = (id) => {
+  const request = allStopRequests.find(r => r.id === id);
+  if (!request) return;
+
+  currentStopRequestId = id;
+  
+  const shortId = id.substr(0, 8).toUpperCase();
+  document.getElementById('stopDetailId').textContent = `Stop Request #${shortId}`;
+  document.getElementById('stopDetailName').textContent = request.stopName || 'Unnamed Stop';
+  document.getElementById('stopDetailBetween').textContent = request.betweenStops || 'Not specified';
+  
+  const submitter = request.isAnonymous 
+    ? 'Anonymous User' 
+    : (request.userEmail || 'User');
+  document.getElementById('stopDetailSubmitter').textContent = submitter;
+  
+  const date = request.createdAt 
+    ? new Date(request.createdAt.toDate()).toLocaleString('en-IN', {
+        year: 'numeric',
+        month: 'long',
+        day: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit'
+      })
+    : 'Not specified';
+  document.getElementById('stopDetailDate').textContent = date;
+  
+  const coords = request.location 
+    ? `${request.location.latitude.toFixed(6)}, ${request.location.longitude.toFixed(6)}`
+    : 'Not available';
+  document.getElementById('stopDetailCoords').textContent = coords;
+  
+  document.getElementById('stopAdminNotesInput').value = request.adminNotes || '';
+
+  const statusBadge = document.getElementById('stopDetailStatus');
+  const currentStatus = request.status || 'pending';
+  statusBadge.className = `status status-${currentStatus}`;
+  statusBadge.textContent = currentStatus;
+
+  document.getElementById('stopStatusSelect').value = currentStatus;
+
+  stopDetailPanel.classList.add('show');
+};
+
+// Close Stop Detail Panel
+closeStopPanel.addEventListener('click', () => {
+  stopDetailPanel.classList.remove('show');
+});
+
+// Update Stop Request Status
+document.getElementById('stopUpdateBtn').addEventListener('click', async () => {
+  if (!currentStopRequestId) return;
+  
+  const newStatus = document.getElementById('stopStatusSelect').value;
+  const adminNotes = document.getElementById('stopAdminNotesInput').value.trim();
+
+  try {
+    const updateData = {
+      status: newStatus,
+      adminNotes: adminNotes,
+      updatedAt: Timestamp.now()
+    };
+
+    if (newStatus === 'approved') {
+      updateData.approvedAt = Timestamp.now();
+    } else if (newStatus === 'rejected') {
+      updateData.rejectedAt = Timestamp.now();
+    }
+
+    await updateDoc(doc(db, 'stopRequests', currentStopRequestId), updateData);
+    alert('✅ Stop request updated successfully');
+  } catch (err) {
+    console.error('Error updating stop request:', err);
+    alert('❌ Error updating stop request: ' + err.message);
+  }
+});
+
+// Approve Stop Request
+document.getElementById('approveBtn').addEventListener('click', async () => {
+  if (!currentStopRequestId) return;
+
+  const adminNotes = document.getElementById('stopAdminNotesInput').value.trim();
+
+  if (!confirm('Approve this stop request?')) return;
+
+  try {
+    await updateDoc(doc(db, 'stopRequests', currentStopRequestId), {
+      status: 'approved',
+      adminNotes: adminNotes,
+      approvedAt: Timestamp.now(),
+      updatedAt: Timestamp.now()
+    });
+    stopDetailPanel.classList.remove('show');
+    alert('✅ Stop request approved');
+  } catch (err) {
+    console.error('Error approving stop request:', err);
+    alert('❌ Error: ' + err.message);
+  }
+});
+
+// Reject Stop Request
+document.getElementById('rejectBtn').addEventListener('click', async () => {
+  if (!currentStopRequestId) return;
+
+  const adminNotes = document.getElementById('stopAdminNotesInput').value.trim();
+
+  if (!confirm('Reject this stop request?')) return;
+
+  try {
+    await updateDoc(doc(db, 'stopRequests', currentStopRequestId), {
+      status: 'rejected',
+      adminNotes: adminNotes,
+      rejectedAt: Timestamp.now(),
+      updatedAt: Timestamp.now()
+    });
+    stopDetailPanel.classList.remove('show');
+    alert('✅ Stop request rejected');
+  } catch (err) {
+    console.error('Error rejecting stop request:', err);
+    alert('❌ Error: ' + err.message);
+  }
+});
+
+// Filter Event Listeners - Stop Requests
+[stopSearchInput, stopStatusFilter].forEach(el => {
+  el.addEventListener('input', applyStopFiltersAndRender);
+  el.addEventListener('change', applyStopFiltersAndRender);
+});
+
+// ==================== GLOBAL EVENT LISTENERS ====================
+
+// ESC Key to Close Panels
 document.addEventListener('keydown', (e) => {
-  if (e.key === 'Escape' && detailPanel.classList.contains('show')) {
-    detailPanel.classList.remove('show');
+  if (e.key === 'Escape') {
+    if (detailPanel.classList.contains('show')) {
+      detailPanel.classList.remove('show');
+    }
+    if (stopDetailPanel.classList.contains('show')) {
+      stopDetailPanel.classList.remove('show');
+    }
   }
 });
 
@@ -316,4 +656,5 @@ document.addEventListener('DOMContentLoaded', () => {
   if (!admin) return;
   
   initComplaintsListener();
+  initStopRequestsListener();
 });

@@ -1,4 +1,4 @@
-/* complaints.css - Complaints Management Styles */
+/* helpDesk.css - Complaints & Stop Requests Management Styles */
 
 * { 
   box-sizing: border-box; 
@@ -157,7 +157,7 @@ body {
   font-size: 12px;
 }
 
-/* Filters card */
+/* Filters card (Complaints) */
 .filters-card { 
   background: #fff; 
   border-radius: 10px; 
@@ -173,6 +173,11 @@ body {
   border: 1px solid #eef2f7; 
   margin-bottom: 12px;
   font-size: 14px;
+  background: #f9fafb;
+}
+
+.search-complaints::placeholder {
+  color: #9ca3af;
 }
 
 .filters-row { 
@@ -375,14 +380,14 @@ body {
   transform: scale(1.2);
 }
 
-/* Loading state */
+/* Loading / empty state */
 .loading {
   text-align: center;
   padding: 40px;
   color: #6b7280;
 }
 
-/* Detail Panel */
+/* Detail Panel (complaints & stop requests share this) */
 .detail-panel {
   position: fixed;
   top: 72px;
@@ -581,7 +586,151 @@ body {
   color: #6b7280; 
 }
 
-/* Responsive */
+/* Pagination (for both complaints & stop requests) */
+.pagination-container {
+  width: 100%;
+  display: flex;
+  justify-content: space-between;   /* left – center – right */
+  align-items: center;
+  padding: 6px 5px;
+  margin-top: 6px;
+}
+
+.pagination-info {
+  flex: 1;
+  text-align: center;
+  font-size: 14px;
+  font-weight: 600;
+  color: #333;
+}
+
+.pagination-btn {
+  background: #f3f4f6;
+  border: 1px solid #d1d5db;
+  padding: 3px 10px;
+  border-radius: 6px;
+  font-size: 14px;
+  cursor: pointer;
+  transition: 0.2s ease;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.pagination-btn:hover:not([disabled]) {
+  background: #e5e7eb;
+}
+
+.pagination-btn[disabled] {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+/* ---------------- NEW STOP REQUESTS SECTION ---------------- */
+
+.stop-requests-section {
+  margin-top: 24px;
+  background: #ffffff;
+  border-radius: 10px;
+  padding: 18px 18px 22px;
+  box-shadow: 0 2px 6px rgba(3, 10, 25, 0.04);
+}
+
+/* Header inside New Stop Requests */
+.stop-requests-section .section-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-bottom: 12px;
+}
+
+.stop-requests-section .section-header h2 {
+  font-size: 20px;
+  font-weight: 700;
+  margin-bottom: 4px;
+}
+
+/* Filters block inside stop requests */
+.stop-filters-card {
+  padding-top: 4px;
+  margin-bottom: 14px;
+}
+
+.stop-filters-card .search-complaints {
+  margin-bottom: 10px;
+}
+
+/* make the filters row align nicely but keep same style */
+.stop-filters-card .filters-row {
+  margin-top: 4px;
+}
+
+/* Flatten inner table-card so whole section feels like one card */
+.stop-requests-section .table-card {
+  background: transparent;
+  box-shadow: none;
+  padding: 0;
+}
+
+/* Give the stop-requests table its own rounded border inside the card */
+.stop-requests-section .table-wrap {
+  border-radius: 10px;
+  border: 1px solid #eef2f7;
+  background: #ffffff;
+}
+
+/* Empty-state styling for "No stop requests found" */
+#stopRequestsBody .loading {
+  padding: 40px 0 48px;
+  color: #9ca3af;
+  font-size: 14px;
+}
+
+/* action buttons in stop request panel */
+.action-buttons-row {
+  display: flex;
+  gap: 8px;
+}
+
+.btn-approve,
+.btn-reject {
+  flex: 1;
+  padding: 10px 12px;
+  border-radius: 8px;
+  border: none;
+  font-size: 14px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: 0.2s ease;
+}
+
+.btn-approve {
+  background: #16a34a;
+  color: #fff;
+}
+
+.btn-approve:hover {
+  background: #15803d;
+}
+
+.btn-reject {
+  background: #ef4444;
+  color: #fff;
+}
+
+.btn-reject:hover {
+  background: #dc2626;
+}
+
+/* Stop requests pagination sits right under table border */
+.stop-requests-section .pagination-container {
+  border-top: 1px solid #f1f5f9;
+  margin-top: 0;
+  padding-top: 8px;
+}
+
+/* ---------------- Responsive ---------------- */
+
 @media (max-width: 900px) {
   .layout { 
     flex-direction: column; 
@@ -612,5 +761,9 @@ body {
   
   .table-wrap {
     max-height: 400px;
+  }
+  
+  .stop-requests-section {
+    padding: 14px;
   }
 }
