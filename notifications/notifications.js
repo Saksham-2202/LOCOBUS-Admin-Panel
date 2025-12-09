@@ -1,4 +1,4 @@
-/* notifications.js - Full Code with Delete Functionality */
+/* notifications.js - Full Code with Delete Functionality + Job Waitlist */
 
 import { initializeApp } from "https://www.gstatic.com/firebasejs/9.23.0/firebase-app.js";
 import { getFirestore, collection, addDoc, serverTimestamp, query, orderBy, onSnapshot, where, deleteDoc, doc, Timestamp, getDocs } from "https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore.js";
@@ -78,12 +78,10 @@ document.addEventListener('DOMContentLoaded', () => {
     let q;
     
     if (currentFilter === 'all') {
-      // Fetch from both collections
       fetchBothCollections();
       return;
     }
     
-    // Fetch from specific collection
     const collectionName = currentFilter === 'conductors' ? 'notifications' : 'user_notifications';
     q = query(collection(db, collectionName), orderBy("createdAt", "desc"));
     
@@ -93,8 +91,6 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 
   function fetchBothCollections() {
-    const notifications = [];
-
     const qConductors = query(collection(db, "notifications"), orderBy("createdAt", "desc"));
     const qUsers = query(collection(db, "user_notifications"), orderBy("createdAt", "desc"));
 
@@ -108,15 +104,7 @@ document.addEventListener('DOMContentLoaded', () => {
         });
       });
       
-      // Merge and sort
-      const allNotifs = [...conductorNotifs];
-      
-      // Get user notifications too
       onSnapshot(qUsers, (userSnapshot) => {
-        // We clear this array to avoid duplicating user notifications on conductor updates
-        // In a real app, merging streams is cleaner with RxJS, but here we rebuild the list
-        // Note: This logic is simplified; iterating both snapshots ensures fresh data.
-        
         const userNotifs = [];
         userSnapshot.forEach((docSnap) => {
           userNotifs.push({
@@ -126,10 +114,7 @@ document.addEventListener('DOMContentLoaded', () => {
           });
         });
 
-        // Combine
         const combined = [...conductorNotifs, ...userNotifs];
-        
-        // Sort by createdAt
         combined.sort((a, b) => {
           const timeA = a.data.createdAt ? a.data.createdAt.toMillis() : 0;
           const timeB = b.data.createdAt ? b.data.createdAt.toMillis() : 0;
@@ -141,8 +126,6 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   }
 
-  // ---------------- DISPLAY & RENDER LOGIC ----------------
-
   function displayCombinedNotifications(notifs) {
     recentList.innerHTML = '';
     
@@ -152,7 +135,6 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     notifs.forEach((item) => {
-      // Determine collection based on target
       const collectionName = item.target === 'conductors' ? 'notifications' : 'user_notifications';
       renderNotificationItem(item.id, item.data, item.target, collectionName);
     });
@@ -166,7 +148,6 @@ document.addEventListener('DOMContentLoaded', () => {
       return;
     }
 
-    // Determine collection based on current filter
     const collectionName = targetType === 'conductors' ? 'notifications' : 'user_notifications';
 
     snapshot.forEach((docSnap) => {
@@ -174,7 +155,6 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   }
 
-  // Helper function to render HTML for a single item (Avoids code duplication)
   function renderNotificationItem(docId, data, targetType, collectionName) {
     const dateObj = data.createdAt ? data.createdAt.toDate() : new Date();
     const expiryObj = data.expiresAt ? data.expiresAt.toDate() : null;
@@ -186,7 +166,6 @@ document.addEventListener('DOMContentLoaded', () => {
     const itemEl = document.createElement('div');
     itemEl.className = 'recent-item';
     
-    // Metadata for modal
     itemEl.dataset.title = data.title || '';
     itemEl.dataset.message = data.message || '';
     itemEl.dataset.date = dateStr;
@@ -211,30 +190,25 @@ document.addEventListener('DOMContentLoaded', () => {
       </div>
     `;
 
-    // View Details Listener
     itemEl.querySelector(".view-detail").addEventListener("click", (e) => {
       e.preventDefault();
       openNotifDetails(itemEl);
     });
 
-    // DELETE BUTTON LISTENER
     itemEl.querySelector(".btn-delete").addEventListener("click", (e) => {
-      e.stopPropagation(); // Prevent bubbling to card click if added later
+      e.stopPropagation();
       deleteNotification(docId, collectionName);
     });
 
     recentList.appendChild(itemEl);
   }
 
-  // ---------------- DELETE LOGIC ----------------
-  
   async function deleteNotification(docId, collectionName) {
-    const confirmDelete = confirm("Are you sure you want to PERMANENTLY delete this notification? This will remove it from all devices.");
+    const confirmDelete = confirm("Are you sure you want to PERMANENTLY delete this notification?");
     
     if (confirmDelete) {
       try {
         await deleteDoc(doc(db, collectionName, docId));
-        // The onSnapshot listener will automatically refresh the UI
         alert("Notification deleted successfully.");
       } catch (error) {
         console.error("Error deleting document: ", error);
@@ -243,7 +217,6 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   }
 
-  // ---------------- VALIDATION ----------------
   function validate() {
     if (!title.value.trim()) { alert('Enter title'); return false; }
     if (!message.value.trim()) { alert('Enter message content'); return false; }
@@ -251,7 +224,6 @@ document.addEventListener('DOMContentLoaded', () => {
     return true;
   }
 
-  // ---------------- SEND TO FIREBASE ----------------
   async function saveNotification(status, scheduledFor = null) {
     if (!validate()) return;
 
@@ -264,11 +236,9 @@ document.addEventListener('DOMContentLoaded', () => {
       const target = getSelectedTarget();
       const collectionName = target === 'conductors' ? 'notifications' : 'user_notifications';
       
-      // Calculate expiry time (24 hours from now)
       const now = new Date();
       const expiresAt = new Date(now.getTime() + 24 * 60 * 60 * 1000);
 
-      // Add to appropriate Firestore collection
       await addDoc(collection(db, collectionName), {
         title: title.value.trim(),
         message: message.value.trim(),
@@ -279,7 +249,6 @@ document.addEventListener('DOMContentLoaded', () => {
         expiresAt: Timestamp.fromDate(expiresAt)
       });
 
-      // Clear form
       title.value = "";
       message.value = "";
       schedule.value = "";
@@ -301,7 +270,6 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   }
 
-  // Event Listeners
   sendNow.addEventListener('click', () => saveNotification('sent'));
   
   scheduleBtn.addEventListener('click', () => {
@@ -312,16 +280,12 @@ document.addEventListener('DOMContentLoaded', () => {
     saveNotification('scheduled', schedule.value);
   });
 
-  // Start Listener
   subscribeToNotifications();
 
-  // ---------------- AUTO-DELETE OLD NOTIFICATIONS ----------------
   function setupAutoDelete() {
-    // Check every 5 minutes for expired notifications
     setInterval(async () => {
       const now = new Date();
       
-      // Check conductor notifications
       const qConductors = query(
         collection(db, "notifications"),
         where("expiresAt", "<=", Timestamp.fromDate(now))
@@ -333,7 +297,6 @@ document.addEventListener('DOMContentLoaded', () => {
         console.log(`Deleted expired conductor notification: ${docSnap.id}`);
       });
       
-      // Check user notifications
       const qUsers = query(
         collection(db, "user_notifications"),
         where("expiresAt", "<=", Timestamp.fromDate(now))
@@ -345,11 +308,9 @@ document.addEventListener('DOMContentLoaded', () => {
         console.log(`Deleted expired user notification: ${docSnap.id}`);
       });
       
-    }, 5 * 60 * 1000); // Every 5 minutes
+    }, 5 * 60 * 1000);
   }
 
-  // Note: For production, you should use Firebase Cloud Functions for auto-deletion
-  // This client-side approach is a fallback
   setupAutoDelete();
 
   // ============================================================
@@ -392,7 +353,78 @@ document.addEventListener('DOMContentLoaded', () => {
   document.addEventListener("keydown", (e) => {
     if (e.key === "Escape") closeModal();
   });
+
+  // ============================================================
+  // JOB WAITLIST SECTION
+  // ============================================================
+  const waitlistTableBody = document.getElementById('waitlistTableBody');
+  const waitlistCount = document.getElementById('waitlistCount');
+  const sendToAllBtn = document.getElementById('sendToAllBtn');
+  
+  let waitlistEmails = [];
+
+  // Fetch job waitlist applications
+  function subscribeToWaitlist() {
+    const q = query(collection(db, "job_waitlist"), orderBy("timestamp", "desc"));
+    
+    onSnapshot(q, (snapshot) => {
+      waitlistTableBody.innerHTML = '';
+      waitlistEmails = [];
+      
+      if (snapshot.empty) {
+        waitlistTableBody.innerHTML = `
+          <tr>
+            <td colspan="5" style="text-align:center; padding:20px; color:#999;">
+              No applications yet
+            </td>
+          </tr>
+        `;
+        waitlistCount.textContent = '0';
+        return;
+      }
+      
+      snapshot.forEach((docSnap, index) => {
+        const data = docSnap.data();
+        const dateObj = data.timestamp ? data.timestamp.toDate() : new Date();
+        const dateStr = dateObj.toLocaleDateString();
+        
+        waitlistEmails.push(data.email);
+        
+        const row = document.createElement('tr');
+        row.innerHTML = `
+          <td>${index + 1}</td>
+          <td>${data.name || 'N/A'}</td>
+          <td>${data.email || 'N/A'}</td>
+          <td><span class="post-badge">${data.interestedPost || 'N/A'}</span></td>
+          <td>${dateStr}</td>
+        `;
+        
+        waitlistTableBody.appendChild(row);
+      });
+      
+      waitlistCount.textContent = snapshot.size;
+    });
+  }
+
+  // Send to all emails via Gmail
+  sendToAllBtn.addEventListener('click', () => {
+    if (waitlistEmails.length === 0) {
+      alert('No email addresses found in the waitlist.');
+      return;
+    }
+    
+    const subject = 'PRTC Job Opening Notification';
+    const body = 'Dear Applicant,%0D%0A%0D%0AWe are pleased to inform you that PRTC job applications are now open.%0D%0A%0D%0APlease visit our portal to apply.%0D%0A%0D%0AThank you!';
+    
+    // Create mailto link with all emails in BCC
+    const mailtoLink = `https://mail.google.com/mail/?view=cm&fs=1&bcc=${waitlistEmails.join(',')}&su=${subject}&body=${body}`;
+    
+    window.open(mailtoLink, '_blank');
+  });
+
+  subscribeToWaitlist();
 });
+
 // Lottie bus logo animation
 document.addEventListener('DOMContentLoaded', () => {
   const logoContainer = document.getElementById('busLogoAnim');
@@ -402,7 +434,7 @@ document.addEventListener('DOMContentLoaded', () => {
       renderer: 'svg',
       loop: true,
       autoplay: true,
-      path: '../index/Bus_carga_trackMile.json'  // <-- put your real path here
+      path: '../index/Bus_carga_trackMile.json'
     });
   }
 });

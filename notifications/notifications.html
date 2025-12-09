@@ -105,7 +105,54 @@
         </aside>
       </div>
 
-      <!-- NEW EMAIL NOTIFICATION SECTION -->
+      <!-- JOB WAITLIST SECTION -->
+      <section class="card waitlist-card">
+        <div class="section-header">
+          <div class="section-icon">📋</div>
+          <div>
+            <h3>Job Waitlist Applications</h3>
+            <p class="section-subtitle">Manage job applications and send notifications to applicants</p>
+          </div>
+          <div class="waitlist-badge">
+            <span id="waitlistCount">0</span> Applications
+          </div>
+        </div>
+
+        <div class="waitlist-container">
+          <div class="waitlist-table-wrapper">
+            <table class="waitlist-table">
+              <thead>
+                <tr>
+                  <th>No.</th>
+                  <th>Name</th>
+                  <th>Email</th>
+                  <th>Interested Post</th>
+                  <th>Applied Date</th>
+                </tr>
+              </thead>
+              <tbody id="waitlistTableBody">
+                <tr>
+                  <td colspan="5" style="text-align:center; padding:20px; color:#999;">
+                    Loading applications...
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+
+          <div class="waitlist-actions">
+            <button id="sendToAllBtn" class="btn-primary btn-email-all">
+              <span>📧</span>
+              Send Email to All Applicants
+            </button>
+            <p class="waitlist-note">
+              💡 This will open Gmail with all applicant emails in BCC field
+            </p>
+          </div>
+        </div>
+      </section>
+
+      <!-- EMAIL NOTIFICATION SECTION -->
       <section class="card email-notification-card">
         <div class="section-header">
           <div class="section-icon">✉️</div>
