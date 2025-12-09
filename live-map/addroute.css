@@ -11,99 +11,98 @@ body {
 }
 
 .layout {
-  display: flex;
-  height: 100vh;
+    display: flex;
+    height: 100vh;
 }
 
 /* Sidebar */
 .sidebar {
-  width: 240px;
-  background: white;
-  padding: 20px 15px;
-  display: flex;
-  flex-direction: column;
-  border-right: 1px solid #dcdcdc;
-  margin: 18px;
-  border-radius: 12px;
+    width: 240px;
+    background: white;
+    padding: 20px 15px;
+    display: flex;
+    flex-direction: column;
+    border-right: 1px solid #dcdcdc;
+    margin: 18px;
+    border-radius: 12px;
 }
 
-
 .brand { 
-  font-weight: 700; 
-  font-size: 20px; 
-  margin-bottom: 12px;
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  white-space: nowrap;  
+    font-weight: 700; 
+    font-size: 20px; 
+    margin-bottom: 12px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    white-space: nowrap;  
 }
 
 .brand span {
-  display: inline-block;      /* 🔥 prevents it from pushing out the logo */
+    display: inline-block;
 }
 
 #busLogoAnim {
-  width: 50px !important;
-  height: 43px !important;
-  flex-shrink: 0 !important;  /* 🔥 keeps animation visible */
-  overflow: visible !important;
+    width: 50px !important;
+    height: 43px !important;
+    flex-shrink: 0 !important;
+    overflow: visible !important;
 }
 
 .bus-logo {
-  width: 50px;   /* change size if you want bigger/smaller */
-  height: 43px;
+    width: 50px;
+    height: 43px;
 }
 
 .menu {
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
-  margin-bottom: auto;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    margin-bottom: auto;
 }
 
 .menu-item {
-  padding: 10px 12px;
-  border-radius: 8px;
-  cursor: pointer;
-  font-size: 16px;
-  text-decoration: none;
-  color: #333;
-  transition: all 0.2s ease;
+    padding: 10px 12px;
+    border-radius: 8px;
+    cursor: pointer;
+    font-size: 16px;
+    text-decoration: none;
+    color: #333;
+    transition: all 0.2s ease;
 }
 
 .menu-item.active,
 .menu-item:hover {
-  background: #e6ecff;
-  color: #0033cc;
+    background: #e6ecff;
+    color: #0033cc;
 }
 
 .admin-profile {
-  margin-top: 20px;
-  padding: 10px;
-  background: #f1f1f1;
-  border-radius: 6px;
-  text-align: center;
-  font-size: 14px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 8px;
+    margin-top: 20px;
+    padding: 10px;
+    background: #f1f1f1;
+    border-radius: 6px;
+    text-align: center;
+    font-size: 14px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
 }
 
 .admin-icon {
-  width: 32px;
-  height: 32px;
-  border-radius: 50%;
-  object-fit: cover;
-  background-color: #ffffff;
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    object-fit: cover;
+    background-color: #ffffff;
 }
-
 
 /* Main Content */
 .main-content {
     flex: 1;  
     padding: 30px;
     background: #f0f2f5;
+    overflow-y: auto;
 }
 
 .page-header {
@@ -134,6 +133,7 @@ body {
     border-radius: 12px;
     box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
     overflow: hidden;
+    animation: fadeIn 0.5s ease;
 }
 
 .card-header {
@@ -242,6 +242,11 @@ body {
     color: #6c757d;
 }
 
+/* Preview Card */
+.preview-card {
+    display: none;
+}
+
 /* Preview Table */
 .table-wrapper {
     overflow-x: auto;
@@ -280,7 +285,7 @@ body {
 
 /* Action Buttons */
 .action-buttons {
-    display: flex;
+    display: none;
     gap: 15px;
     justify-content: center;
     margin-top: 20px;
@@ -318,6 +323,11 @@ body {
 .btn-secondary:hover {
     background: #5a6268;
     transform: translateY(-2px);
+}
+
+/* Progress Card */
+.progress-card {
+    display: none;
 }
 
 /* Progress Section */
@@ -397,24 +407,22 @@ body {
     }
 }
 
-.card {
-    animation: fadeIn 0.5s ease;
-}
-
 /* Responsive */
 @media (max-width: 768px) {
     .sidebar {
         width: 70px;
     }
 
-    .brand-text,
-    .menu-item span:not(.menu-icon),
-    .admin-profile span {
+    .brand span {
         display: none;
     }
 
-    .main-content {
-        margin-left: 70px;
+    .menu-item span {
+        display: none;
+    }
+
+    .admin-profile span {
+        display: none;
     }
 
     .menu-item {
@@ -429,21 +437,28 @@ body {
     .action-buttons {
         flex-direction: column;
     }
+
+    .main-content {
+        padding: 15px;
+    }
 }
 
 /* Scrollbar Styling */
 .sidebar::-webkit-scrollbar,
-.status-log::-webkit-scrollbar {
+.status-log::-webkit-scrollbar,
+.main-content::-webkit-scrollbar {
     width: 6px;
 }
 
 .sidebar::-webkit-scrollbar-thumb,
-.status-log::-webkit-scrollbar-thumb {
+.status-log::-webkit-scrollbar-thumb,
+.main-content::-webkit-scrollbar-thumb {
     background: #cbd5e0;
     border-radius: 10px;
 }
 
 .sidebar::-webkit-scrollbar-thumb:hover,
-.status-log::-webkit-scrollbar-thumb:hover {
+.status-log::-webkit-scrollbar-thumb:hover,
+.main-content::-webkit-scrollbar-thumb:hover {
     background: #a0aec0;
 }

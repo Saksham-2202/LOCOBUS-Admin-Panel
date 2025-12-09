@@ -1,243 +1,341 @@
-src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"
-    src="https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore-compat.js"
-    
-    src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"
+// ===========================
+// Firebase Initialization
+// ===========================
+const firebaseConfig = {
+    apiKey: "AIzaSyCRtx7Oyda48Hz0eu-BiNrGYiK3_36Vl-c",
+    authDomain: "locobus-e4274.firebaseapp.com",
+    projectId: "locobus-e4274",
+    storageBucket: "locobus-e4274.firebasestorage.app",
+    messagingSenderId: "296482389648",
+    appId: "1:296482389648:web:1827bd92dc55c8a857e215"
+};
 
-        // Firebase Configuration
-        const firebaseConfig = {
-            apiKey: "AIzaSyCRtx7Oyda48Hz0eu-BiNrGYiK3_36Vl-c",
-            authDomain: "locobus-e4274.firebaseapp.com",
-            projectId: "locobus-e4274",
-            storageBucket: "locobus-e4274.firebasestorage.app",
-            messagingSenderId: "296482389648",
-            appId: "1:296482389648:web:1827bd92dc55c8a857e215"
+firebase.initializeApp(firebaseConfig);
+const db = firebase.firestore();
+
+// Main variables
+let parsedData = [];
+const ORS_GEO_API_KEY = "eyJvcmciOiI1YjNjZTM1OTc4NTExMTAwMDFjZjYyNDgiLCJpZCI6ImMzMzllNDZlMGQ2ZjQ4ZDk5N2I1NTVmZjNhOTk0NWM1IiwiaCI6Im11cm11cjY0In0=";
+const ORS_API_KEY = "eyJvcmciOiI1YjNjZTM1OTc4NTExMTAwMDFjZjYyNDgiLCJpZCI6ImMzMzllNDZlMGQ2ZjQ4ZDk5N2I1NTVmZjNhOTk0NWM1IiwiaCI6Im11cm11cjY0In0="; // <<<<< IMPORTANT
+
+
+// ===========================
+// DOWNLOAD TEMPLATE
+// ===========================
+function downloadTemplate() {
+    const template = [
+        ['route_number', 'from', 'to', 'distance_km', 'fare', 'stops'],
+        ['101', 'Garhshankar Bus Stand', 'Hoshiarpur', '35', '50', 'Stop1,Stop2,Stop3'],
+        ['102', 'Jalandhar City', 'Ludhiana', '75', '80', 'Stop4,Stop5,Stop6'],
+        ['103', 'Chandigarh ISBT', 'Mohali', '15', '25', 'Stop7,Stop8']
+    ];
+
+    const ws = XLSX.utils.aoa_to_sheet(template);
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, "Routes Template");
+    XLSX.writeFile(wb, "bus_routes_template.xlsx");
+    addLog("Template downloaded!", "success");
+}
+
+
+// ===========================
+// FILE SELECT HANDLER
+// ===========================
+function handleFileSelect(event) {
+    const file = event.target.files[0];
+    if (!file) return;
+
+    document.getElementById("previewSection").style.display = "block";
+    document.getElementById("progressSection").style.display = "none";
+
+    addLog(`Reading file: ${file.name}`, "info");
+
+    const reader = new FileReader();
+
+    reader.onload = function(e) {
+        try {
+            const workbook = XLSX.read(new Uint8Array(e.target.result), { type: "array" });
+            const firstSheet = workbook.Sheets[workbook.SheetNames[0]];
+            const json = XLSX.utils.sheet_to_json(firstSheet);
+
+            if (json.length === 0) {
+                addLog("Invalid or empty file!", "error");
+                return;
+            }
+
+            parsedData = json;
+            displayPreview(json);
+            addLog(`Parsed ${json.length} routes`, "success");
+
+        } catch (err) {
+            addLog("Error reading file: " + err.message, "error");
+        }
+    };
+
+    reader.readAsArrayBuffer(file);
+}
+
+
+// ===========================
+// DISPLAY PREVIEW (FIRST 5 ROWS)
+// ===========================
+function displayPreview(data) {
+    const tbody = document.getElementById("previewBody");
+    const previewSection = document.getElementById("previewSection");
+    const actions = document.getElementById("actionButtons");
+
+    tbody.innerHTML = "";
+
+    data.slice(0, 5).forEach(row => {
+        tbody.innerHTML += `
+            <tr>
+                <td>${row.route_number}</td>
+                <td>${row.from}</td>
+                <td>${row.to}</td>
+                <td>${row.distance_km}</td>
+                <td>${row.fare}</td>
+            </tr>
+        `;
+    });
+
+    if (data.length > 5) {
+        tbody.innerHTML += `
+            <tr>
+                <td colspan="5" style="text-align:center;color:#666;">
+                    ...and ${data.length - 5} more routes
+                </td>
+            </tr>
+        `;
+    }
+
+    previewSection.style.display = "block";
+    actions.style.display = "flex";
+}
+
+
+// ===========================
+// GEOCODING FUNCTION
+// ===========================
+async function geocodeLocation(name) {
+    const url = `https://api.openrouteservice.org/geocode/search?api_key=${ORS_GEO_API_KEY}&text=${encodeURIComponent(name + ", Punjab, India")}&size=1`;
+
+    try {
+        const res = await fetch(url);
+        const json = await res.json();
+
+        if (!json.features || json.features.length === 0) {
+            return { success: false };
+        }
+
+        const [lng, lat] = json.features[0].geometry.coordinates;
+
+        return { success: true, lat, lng };
+
+    } catch (err) {
+        return { success: false };
+    }
+}
+
+
+// ===========================
+// DIRECTIONS → POLYLINE
+// ===========================
+async function getRoutePolyline(startLat, startLng, endLat, endLng) {
+    const url = "https://api.openrouteservice.org/v2/directions/driving-car/geojson";
+
+    try {
+        const response = await fetch(url, {
+            method: "POST",
+            headers: {
+                "Authorization": ORS_API_KEY,
+                "Content-Type": "application/json"
+            },
+            body: JSON.stringify({
+                coordinates: [
+                    [startLng, startLat],
+                    [endLng, endLat]
+                ]
+            })
+        });
+
+        const data = await response.json();
+
+        if (!data.features) return { success: false };
+
+        const coords = data.features[0].geometry.coordinates;
+
+        return {
+            success: true,
+            lats: coords.map(c => c[1]),
+            lngs: coords.map(c => c[0])
         };
 
-        firebase.initializeApp(firebaseConfig);
-        const db = firebase.firestore();
+    } catch (err) {
+        return { success: false };
+    }
+}
 
-        let parsedData = [];
 
-        // Download Template Function
-        function downloadTemplate() {
-            const template = [
-                ['route_number', 'from', 'to', 'distance_km', 'fare', 'stops'],
-                ['101', 'Garhshankar Bus Stand', 'Hoshiarpur', '35', '50', 'Stop1,Stop2,Stop3'],
-                ['102', 'Jalandhar City', 'Ludhiana', '75', '80', 'Stop4,Stop5,Stop6'],
-                ['103', 'Chandigarh ISBT', 'Mohali', '15', '25', 'Stop7,Stop8']
-            ];
+// ===========================
+// DUPLICATE ROUTE CHECK
+// ===========================
+async function checkDuplicateRoute(from, to) {
+    const snap = await db.collection("bus_routes")
+        .where("from", "==", from)
+        .where("to", "==", to)
+        .limit(1)
+        .get();
 
-            const ws = XLSX.utils.aoa_to_sheet(template);
-            const wb = XLSX.utils.book_new();
-            XLSX.utils.book_append_sheet(wb, ws, "Routes Template");
-            XLSX.writeFile(wb, "bus_routes_template.xlsx");
-            
-            addLog('Template downloaded successfully!', 'success');
-        }
+    return !snap.empty;
+}
 
-        // Handle File Selection
-        function handleFileSelect(event) {
-            const file = event.target.files[0];
-            if (!file) return;
 
-            addLog(`Reading file: ${file.name}`, 'info');
+// ===========================
+// MAIN PROCESS & UPLOAD
+// ===========================
+async function processAndUpload() {
+    const preview = document.getElementById("previewSection");
+    const progressSection = document.getElementById("progressSection");
+    const progressBar = document.getElementById("progressBar");
+    const actions = document.getElementById("actionButtons");
 
-            const reader = new FileReader();
-            reader.onload = function(e) {
-                try {
-                    const data = new Uint8Array(e.target.result);
-                    const workbook = XLSX.read(data, { type: 'array' });
-                    const firstSheet = workbook.Sheets[workbook.SheetNames[0]];
-                    const jsonData = XLSX.utils.sheet_to_json(firstSheet);
+    preview.style.display = "none";
+    actions.style.display = "none";
+    progressSection.style.display = "block";
+    document.getElementById("statusLog").innerHTML = "";
 
-                    if (jsonData.length === 0) {
-                        addLog('Error: File is empty or invalid format', 'error');
-                        return;
-                    }
+    addLog("🚀 Starting upload...", "info");
 
-                    parsedData = jsonData;
-                    displayPreview(jsonData);
-                    addLog(`✅ Successfully parsed ${jsonData.length} routes`, 'success');
-                } catch (error) {
-                    addLog(`Error parsing file: ${error.message}`, 'error');
-                }
+    let success = 0, errors = 0, skipped = 0;
+
+    for (let i = 0; i < parsedData.length; i++) {
+        const row = parsedData[i];
+
+        const pct = Math.round(((i + 1) / parsedData.length) * 100);
+        progressBar.style.width = pct + "%";
+        progressBar.querySelector("span").innerText = pct + "%";
+
+        addLog(`Route ${i + 1}: ${row.from} → ${row.to}`, "info");
+
+        try {
+            // DUPLICATE CHECK
+            if (await checkDuplicateRoute(row.from, row.to)) {
+                addLog("⚠️ Duplicate found, skipping.", "warning");
+                skipped++;
+                continue;
+            }
+
+            // GEOCODE START
+            const start = await geocodeLocation(row.from);
+            if (!start.success) throw new Error("Start location failed");
+
+            // GEOCODE END
+            const end = await geocodeLocation(row.to);
+            if (!end.success) throw new Error("End location failed");
+
+            // GET POLYLINE
+            addLog("  ↪ Fetching polyline...", "info");
+
+            const poly = await getRoutePolyline(start.lat, start.lng, end.lat, end.lng);
+
+            let lats, lngs;
+
+            if (poly.success) {
+                lats = poly.lats;
+                lngs = poly.lngs;
+                addLog(`  🛣 Polyline OK (${lats.length} points)`, "success");
+            } else {
+                addLog("  ⚠ Polyline failed, using straight line", "warning");
+                lats = [start.lat, end.lat];
+                lngs = [start.lng, end.lng];
+            }
+
+            // FINAL DATA
+            const routeDoc = {
+                route_number: row.route_number ?? `Route-${i + 1}`,
+                from: row.from,
+                to: row.to,
+                start_lat: start.lat,
+                start_lng: start.lng,
+                end_lat: end.lat,
+                end_lng: end.lng,
+                polyline_lats: lats,
+                polyline_lngs: lngs,
+                distance_km: Number(row.distance_km || 0),
+                fare: Number(row.fare || 0),
+                status: "active",
+                created_at: firebase.firestore.FieldValue.serverTimestamp(),
+                uploaded_by: "admin",
+                upload_method: "bulk_import"
             };
-            reader.readAsArrayBuffer(file);
+
+            await db.collection("bus_routes").add(routeDoc);
+
+            addLog("  ✅ Saved!", "success");
+            success++;
+
+        } catch (err) {
+            addLog("  ❌ Error: " + err.message, "error");
+            errors++;
         }
+    }
 
-        // Display Preview
-        function displayPreview(data) {
-            const previewTable = document.getElementById('previewTable');
-            const previewBody = document.getElementById('previewBody');
-            const actionButtons = document.getElementById('actionButtons');
+    addLog(`🎉 Upload Completed`, "success");
+    addLog(`✔ Success: ${success}`, "success");
+    addLog(`⚠ Skipped: ${skipped}`, "warning");
+    addLog(`❌ Errors: ${errors}`, "error");
 
-            previewBody.innerHTML = '';
-            
-            data.slice(0, 5).forEach(row => {
-                const tr = document.createElement('tr');
-                tr.innerHTML = `
-                    <td>${row.route_number || 'N/A'}</td>
-                    <td>${row.from || 'N/A'}</td>
-                    <td>${row.to || 'N/A'}</td>
-                    <td>${row.distance_km || 'N/A'}</td>
-                    <td>${row.fare || 'N/A'}</td>
-                `;
-                previewBody.appendChild(tr);
-            });
+    progressBar.style.background = "#4caf50";
+}
 
-            if (data.length > 5) {
-                const tr = document.createElement('tr');
-                tr.innerHTML = `<td colspan="5" style="text-align: center; color: #666; font-style: italic;">... and ${data.length - 5} more routes</td>`;
-                previewBody.appendChild(tr);
-            }
 
-            previewTable.style.display = 'table';
-            actionButtons.style.display = 'flex';
-        }
+// ===========================
+// LOGGING HELPER
+// ===========================
+function addLog(msg, type = "info") {
+    const log = document.getElementById("statusLog");
+    const div = document.createElement("div");
+    div.className = `status-item ${type}`;
+    div.innerHTML = `
+        <span>${type === "success" ? "✅" :
+                type === "error" ? "❌" :
+                type === "warning" ? "⚠️" : "ℹ️"}</span>
+        <span>${msg}</span>
+    `;
+    log.appendChild(div);
+    log.scrollTop = log.scrollHeight;
+}
 
-        // Geocode Location using OpenRouteService
-        async function geocodeLocation(locationName) {
-            const apiKey = 'eyJvcmciOiI1YjNjZTM1OTc4NTExMTAwMDFjZjYyNDgiLCJpZCI6ImMzMzllNDZlMGQ2ZjQ4ZDk5N2I1NTVmZjNhOTk0NWM1IiwiaCI6Im11cm11cjY0In0='; // You need to get this from openrouteservice.org
-            
-            try {
-                // Add "Punjab, India" for better accuracy
-                const query = `${locationName}, Punjab, India`;
-                const url = `https://api.openrouteservice.org/geocode/search?api_key=${apiKey}&text=${encodeURIComponent(query)}&size=1`;
-                
-                const response = await fetch(url);
-                if (!response.ok) throw new Error('Geocoding failed');
-                
-                const data = await response.json();
-                
-                if (data.features && data.features.length > 0) {
-                    const coords = data.features[0].geometry.coordinates;
-                    return {
-                        latitude: coords[1],
-                        longitude: coords[0],
-                        success: true
-                    };
-                }
-                
-                return { success: false, error: 'Location not found' };
-            } catch (error) {
-                return { success: false, error: error.message };
-            }
-        }
 
-        // Process and Upload Routes
-        async function processAndUpload() {
-            const progressSection = document.getElementById('progressSection');
-            const progressBar = document.getElementById('progressBar');
-            const actionButtons = document.getElementById('actionButtons');
-            
-            progressSection.style.display = 'block';
-            actionButtons.style.display = 'none';
-            
-            addLog('🚀 Starting route processing...', 'info');
+// ===========================
+// RESET UPLOADER
+// ===========================
+function resetUpload() {
+    document.getElementById("fileInput").value = "";
+    document.getElementById("previewSection").style.display = "none";
+    document.getElementById("actionButtons").style.display = "none";
+    document.getElementById("progressSection").style.display = "none";
+    document.getElementById("previewBody").innerHTML = "";
+    document.getElementById("statusLog").innerHTML = "";
+    parsedData = [];
+}
 
-            let successCount = 0;
-            let errorCount = 0;
 
-            for (let i = 0; i < parsedData.length; i++) {
-                const route = parsedData[i];
-                const progress = Math.round(((i + 1) / parsedData.length) * 100);
-                progressBar.style.width = progress + '%';
-                progressBar.textContent = progress + '%';
+// ===========================
+// LOTTIE ANIMATION
+// ===========================
+document.addEventListener("DOMContentLoaded", () => {
+    const logo = document.getElementById("busLogoAnim");
+    if (logo && window.lottie) {
+        window.lottie.loadAnimation({
+            container: logo,
+            renderer: "svg",
+            loop: true,
+            autoplay: true,
+            path: "../index/Bus_carga_trackMile.json"
+        });
+    }
 
-                addLog(`Processing Route ${i + 1}/${parsedData.length}: ${route.from} → ${route.to}`, 'info');
-
-                try {
-                    // Geocode start location
-                    addLog(`  Geocoding: ${route.from}...`, 'info');
-                    const startGeo = await geocodeLocation(route.from);
-                    
-                    if (!startGeo.success) {
-                        throw new Error(`Failed to geocode start location: ${route.from}`);
-                    }
-
-                    // Geocode end location
-                    addLog(`  Geocoding: ${route.to}...`, 'info');
-                    const endGeo = await geocodeLocation(route.to);
-                    
-                    if (!endGeo.success) {
-                        throw new Error(`Failed to geocode end location: ${route.to}`);
-                    }
-
-                    // Prepare route data
-                    const routeData = {
-                        route_number: route.route_number || `Route-${i + 1}`,
-                        from: route.from,
-                        to: route.to,
-                        start_lat: startGeo.latitude,
-                        start_lng: startGeo.longitude,
-                        end_lat: endGeo.latitude,
-                        end_lng: endGeo.longitude,
-                        distance_km: parseFloat(route.distance_km) || 0,
-                        fare: parseFloat(route.fare) || 0,
-                        status: 'active',
-                        created_at: firebase.firestore.FieldValue.serverTimestamp(),
-                        uploaded_by: 'admin',
-                        upload_method: 'bulk_import'
-                    };
-
-                    // Save to Firestore
-                    await db.collection('bus_routes').add(routeData);
-
-                    addLog(`  ✅ Route saved successfully!`, 'success');
-                    successCount++;
-
-                    // Small delay to avoid rate limiting
-                    await new Promise(resolve => setTimeout(resolve, 1000));
-
-                } catch (error) {
-                    addLog(`  ❌ Error: ${error.message}`, 'error');
-                    errorCount++;
-                }
-            }
-
-            addLog(`\n🎉 Upload Complete!`, 'success');
-            addLog(`✅ Successfully uploaded: ${successCount} routes`, 'success');
-            if (errorCount > 0) {
-                addLog(`❌ Failed: ${errorCount} routes`, 'error');
-            }
-
-            progressBar.style.background = 'linear-gradient(90deg, #4caf50, #66bb6a)';
-        }
-
-        // Add Log Entry
-        function addLog(message, type = 'info') {
-            const statusLog = document.getElementById('statusLog');
-            const logItem = document.createElement('div');
-            logItem.className = `status-item ${type}`;
-            
-            const icon = type === 'success' ? '✅' : 
-                        type === 'error' ? '❌' : 
-                        type === 'warning' ? '⚠️' : 'ℹ️';
-            
-            logItem.innerHTML = `<span>${icon}</span><span>${message}</span>`;
-            statusLog.appendChild(logItem);
-            statusLog.scrollTop = statusLog.scrollHeight;
-        }
-
-        // Reset Upload
-        function resetUpload() {
-            document.getElementById('fileInput').value = '';
-            document.getElementById('previewTable').style.display = 'none';
-            document.getElementById('actionButtons').style.display = 'none';
-            document.getElementById('progressSection').style.display = 'none';
-            document.getElementById('statusLog').innerHTML = '';
-            parsedData = [];
-        }
-// Lottie bus logo animation
-document.addEventListener('DOMContentLoaded', () => {
-  const logoContainer = document.getElementById('busLogoAnim');
-  if (logoContainer && window.lottie) {
-    window.lottie.loadAnimation({
-      container: logoContainer,
-      renderer: 'svg',
-      loop: true,
-      autoplay: true,
-      path: '../index/Bus_carga_trackMile.json'  // <-- put your real path here
-    });
-  }
+    document.getElementById("previewSection").style.display = "none";
+    document.getElementById("progressSection").style.display = "none";
 });
