@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Admin - Bulk Route Upload</title>
+    <title>Admin - Route Management</title>
     <link rel="stylesheet" href="addroute.css"/>
 </head>
 <body>
@@ -27,40 +27,52 @@
 
       <div class="admin-profile">
         <img src="admin img.png" class="admin-icon" alt="Admin" />
-        <span id="adminName">ADMIN_33</span>
+        <span id="adminName">ADMIN</span>
       </div>
     </aside>
 
-    <!-- Main Content -->
     <main class="main-content">
         <div class="page-header">
             <div>
-                <h1>Bulk Route Upload System</h1>
-                <p class="subtitle">Import multiple bus routes from Excel/CSV with automatic geocoding</p>
+                <h1>Route Management System</h1>
+                <p class="subtitle">Sync from cloud, upload Excel, or add routes manually</p>
             </div>
         </div>
 
         <div class="content-wrapper">
-            <!-- Template Download Card -->
+            
             <div class="card template-card">
                 <div class="card-header">
                     <span class="card-icon">📋</span>
                     <h3>Step 1: Download Excel Template</h3>
                 </div>
                 <div class="card-body">
-                    <p class="card-description">Download the template, fill in your route data, then upload it below.</p>
+                    <p class="card-description">Get the correct format for bulk uploads.</p>
                     <button class="btn-download" onclick="downloadTemplate()">
-                        <span>⬇️</span>
-                        Download Excel Template
+                        <span>⬇️</span> Download Template
                     </button>
                 </div>
             </div>
 
-            <!-- Upload Card -->
+            <div class="card sync-card" style="border-left: 4px solid #0b58d0; background: #f0f7ff;">
+                <div class="card-header" style="background: rgba(11, 88, 208, 0.1);">
+                    <span class="card-icon">☁️</span>
+                    <h3>Step 2: Cloud Sync (OneDrive/Google)</h3>
+                </div>
+                <div class="card-body">
+                    <div class="form-group">
+                        <input type="text" id="cloudLinkInput" class="form-input" placeholder="Paste Direct Download Link here...">
+                    </div>
+                    <button class="btn btn-primary" onclick="syncFromCloud()" style="margin-top:10px; width: 100%;">
+                        <span>🔄</span> Sync Now
+                    </button>
+                </div>
+            </div>
+
             <div class="card upload-card">
                 <div class="card-header">
                     <span class="card-icon">📤</span>
-                    <h3>Step 2: Upload Your File</h3>
+                    <h3>Step 3: Upload Excel File</h3>
                 </div>
                 <div class="card-body">
                     <div class="upload-zone">
@@ -68,80 +80,109 @@
                         <label for="fileInput" class="upload-label">
                             <div class="upload-content">
                                 <span class="upload-icon">📁</span>
-                                <span class="upload-text">Choose Excel/CSV File</span>
-                                <span class="upload-hint">Supported formats: .xlsx, .xls, .csv</span>
+                                <span class="upload-text">Choose Excel File</span>
                             </div>
                         </label>
                     </div>
                 </div>
             </div>
 
-            <!-- Preview Section -->
-            <div class="card preview-card" id="previewSection">
+            <div class="card manual-card">
                 <div class="card-header">
+                    <span class="card-icon">✍️</span>
+                    <h3>Step 4: Manual Entry</h3>
+                </div>
+                <div class="card-body">
+                    <div class="form-grid">
+                        <div class="form-group">
+                            <label>Route Number *</label>
+                            <input type="text" id="manualRouteNo" placeholder="e.g. 101" class="form-input">
+                        </div>
+                        <div class="form-group">
+                            <label>Total Fare (₹) *</label>
+                            <input type="number" id="manualFare" placeholder="e.g. 50" class="form-input">
+                        </div>
+                        <div class="form-group">
+                            <label>From (Origin) *</label>
+                            <input type="text" id="manualFrom" placeholder="e.g. Jalandhar" class="form-input">
+                        </div>
+                        <div class="form-group">
+                            <label>To (Destination) *</label>
+                            <input type="text" id="manualTo" placeholder="e.g. Ludhiana" class="form-input" onblur="calculateManualDistance()">
+                        </div>
+                        <div class="form-group">
+                            <label>Distance (km)</label>
+                            <input type="number" id="manualDistance" placeholder="Auto-calculated" class="form-input readonly-input" readonly>
+                        </div>
+                        <div class="form-group full-width">
+                            <label>Stops (Optional)</label>
+                            <input type="text" id="manualStops" placeholder="Stop A, Stop B, Stop C" class="form-input">
+                        </div>
+                    </div>
+                    <div class="manual-actions" style="margin-top: 15px; display: flex; justify-content: flex-end;">
+                        <button class="btn btn-secondary" onclick="addManualToQueue()">
+                            <span>➕</span> Add to Queue
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <div class="card preview-card" id="previewSection" style="border: 2px solid #4caf50;">
+                <div class="card-header" style="background-color: #e8f5e9;">
                     <span class="card-icon">📊</span>
-                    <h3>Data Preview</h3>
+                    <h3>Queue Preview (Review & Upload)</h3>
                 </div>
                 <div class="card-body">
                     <div class="table-wrapper">
-                        <table class="preview-table" id="previewTable">
+                        <table class="preview-table">
                             <thead>
                                 <tr>
-                                    <th>Route Number</th>
+                                    <th>Route</th>
                                     <th>From</th>
                                     <th>To</th>
-                                    <th>Distance (km)</th>
-                                    <th>Fare (₹)</th>
+                                    <th>Dist</th>
+                                    <th>Fare</th>
+                                    <th>Stops</th>
+                                    <th>Source</th>
                                 </tr>
                             </thead>
                             <tbody id="previewBody"></tbody>
                         </table>
                     </div>
-
-                    <!-- Action Buttons -->
-                    <div class="action-buttons" id="actionButtons">
-                        <button class="btn btn-primary" onclick="processAndUpload()">
-                            <span>✅</span>
-                            Process & Upload Routes
+                    
+                    <div class="action-buttons" id="actionButtons" style="display:none; gap:10px; margin-top:20px; padding-top:20px; border-top:1px solid #eee;">
+                        <button class="btn btn-primary" onclick="processAndUpload()" style="flex:1; padding:15px; font-size:16px; background:#4caf50;">
+                            <span>🚀</span> UPLOAD TO DATABASE
                         </button>
-                        <button class="btn btn-secondary" onclick="resetUpload()">
-                            <span>🔄</span>
-                            Cancel
+                        <button class="btn btn-secondary" onclick="resetUpload()" style="padding:15px;">
+                            <span>🗑️</span> Clear
                         </button>
                     </div>
                 </div>
             </div>
 
-            <!-- Progress Section -->
             <div class="card progress-card" id="progressSection">
                 <div class="card-header">
                     <span class="card-icon">⚙️</span>
-                    <h3>Processing Routes...</h3>
+                    <h3>Processing...</h3>
                 </div>
                 <div class="card-body">
                     <div class="progress-bar-container">
-                        <div class="progress-bar" id="progressBar">
-                            <span>0%</span>
-                        </div>
+                        <div class="progress-bar" id="progressBar"><span>0%</span></div>
                     </div>
                     <div class="status-log" id="statusLog"></div>
                 </div>
             </div>
+
         </div>
     </main>
  </div>
 
-    <!-- Firebase SDK -->
     <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-auth-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore-compat.js"></script>
-    
-    <!-- SheetJS for Excel parsing -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
-    
-    <!-- Lottie Player for Bus Animation -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/bodymovin/5.12.2/lottie.min.js"></script>
-    
-    <!-- Your Script -->
     <script src="addroute.js"></script>
 </body>
 </html>
