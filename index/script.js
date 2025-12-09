@@ -2,7 +2,7 @@
 
 import { initializeApp } from "https://www.gstatic.com/firebasejs/9.23.0/firebase-app.js";
 import { 
-  getFirestore, collection, onSnapshot, query, where, doc, setDoc, deleteDoc, addDoc, serverTimestamp, getDoc, orderBy
+  getFirestore, collection, onSnapshot, query, where, doc, setDoc, deleteDoc, addDoc, serverTimestamp, getDoc, orderBy, getDocs 
 } from "https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore.js";
 
 // Firebase Configuration
@@ -447,21 +447,52 @@ function loadPendingApprovals() {
   });
 }
 
+// --- UPDATED: HANDLE APPROVE (Fixes Duplicate Stops) ---
 window.handleApprove = async (docId) => {
+  // Prevent double clicks
+  const btn = document.querySelector(`#item-${docId} button:last-child`);
+  if(btn) { btn.disabled = true; btn.innerText = "⏳"; }
+
   try {
     const pendingRef = doc(db, 'pending_approvals', docId);
     const snap = await getDoc(pendingRef);
-    if (!snap.exists()) return;
+    if (!snap.exists()) {
+        alert("Request no longer exists.");
+        return;
+    }
     const { route_data, stops_data, target_route_id } = snap.data();
     
+    // Reference to the live route (either new or existing)
     const liveRef = target_route_id ? doc(db, 'bus_routes', target_route_id) : doc(collection(db, 'bus_routes'));
+    
+    // 1. Update Route Info
     await setDoc(liveRef, { ...route_data, updated_at: serverTimestamp() });
     
+    // 2. Handle Stops: Delete old ones first if updating
     const stopsRef = collection(liveRef, 'stops');
-    await Promise.all(stops_data.map(stop => addDoc(stopsRef, { ...stop, timestamp: serverTimestamp() })));
+    
+    if (target_route_id) {
+        // Fetch all existing stops
+        const existingStopsSnapshot = await getDocs(stopsRef);
+        // Delete them one by one
+        const deletePromises = existingStopsSnapshot.docs.map(oldStop => deleteDoc(oldStop.ref));
+        await Promise.all(deletePromises);
+    }
+
+    // 3. Add new stops
+    if (stops_data && Array.isArray(stops_data)) {
+        await Promise.all(stops_data.map(stop => addDoc(stopsRef, { ...stop, timestamp: serverTimestamp() })));
+    }
+
+    // 4. Delete the pending request
     await deleteDoc(pendingRef);
     alert("Approved!");
-  } catch (e) { alert("Error: " + e.message); }
+
+  } catch (e) { 
+    console.error(e);
+    alert("Error: " + e.message); 
+    if(btn) { btn.disabled = false; btn.innerText = "Approve"; }
+  }
 };
 
 window.handleReject = async (docId) => {
