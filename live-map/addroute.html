@@ -21,7 +21,7 @@
         <a class="menu-item" href="../notifications/notifications.html">Notifications</a>
         <a class="menu-item" href="../index/createBus.html">Account Panel</a>
         <a class="menu-item" href="../help desk/helpDesk.html">Help Desk</a>
-        <a class="menu-item active" href="../live-map/addroute.html">Route Importer</a>
+        <a class="menu-item active" href="../live-map/addroute.html">Add route</a>
         <a class="menu-item" href="../settings/settings.html">Settings</a>
       </nav>
 
@@ -55,9 +55,18 @@
             </div>
 
             <div class="card sync-card" style="border-left: 4px solid #0b58d0; background: #f0f7ff;">
-                <div class="card-header" style="background: rgba(11, 88, 208, 0.1);">
-                    <span class="card-icon">☁️</span>
-                    <h3>Step 2: Cloud Sync (OneDrive/Google)</h3>
+                <div class="card-header" style="background: rgba(11, 88, 208, 0.1); display: flex; justify-content: space-between; align-items: center;">
+                    <div style="display:flex; align-items:center; gap:10px;">
+                        <span class="card-icon">☁️</span>
+                        <h3>Step 2: Cloud Sync (OneDrive/Google)</h3>
+                    </div>
+                    <div class="toggle-wrapper" style="display:flex; align-items:center; gap:8px;">
+                        <span style="font-size:12px; font-weight:bold; color:#0b58d0;">AUTO-SYNC</span>
+                        <label class="switch">
+                            <input type="checkbox" id="autoSyncToggle" onchange="toggleAutoSync()">
+                            <span class="slider round"></span>
+                        </label>
+                    </div>
                 </div>
                 <div class="card-body">
                     <div class="form-group">
@@ -66,6 +75,7 @@
                     <button class="btn btn-primary" onclick="syncFromCloud()" style="margin-top:10px; width: 100%;">
                         <span>🔄</span> Sync Now
                     </button>
+                    <div id="lastSyncTime" style="text-align:center; font-size:11px; color:#666; margin-top:8px; min-height:16px;"></div>
                 </div>
             </div>
 

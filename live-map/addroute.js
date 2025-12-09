@@ -15,8 +15,25 @@ const auth = firebase.auth();
 const db = firebase.firestore();
 
 let parsedData = [];
+let autoSyncInterval = null;
+
+// Keys for ORS
 const ORS_GEO_API_KEY = "eyJvcmciOiI1YjNjZTM1OTc4NTExMTAwMDFjZjYyNDgiLCJpZCI6ImMzMzllNDZlMGQ2ZjQ4ZDk5N2I1NTVmZjNhOTk0NWM1IiwiaCI6Im11cm11cjY0In0=";
 const ORS_API_KEY = "eyJvcmciOiI1YjNjZTM1OTc4NTExMTAwMDFjZjYyNDgiLCJpZCI6ImMzMzllNDZlMGQ2ZjQ4ZDk5N2I1NTVmZjNhOTk0NWM1IiwiaCI6Im11cm11cjY0In0="; 
+
+// ===========================
+// HELPER: Normalize Keys
+// ===========================
+function normalizeRowKeys(row) {
+    const newRow = {};
+    Object.keys(row).forEach(key => {
+        let cleanKey = key.toLowerCase().trim().replace(/ /g, '_');
+        if (cleanKey.includes('route') && cleanKey.includes('num')) cleanKey = 'route_number';
+        if (cleanKey === 'dist' || cleanKey === 'distance') cleanKey = 'distance_km';
+        newRow[cleanKey] = row[key];
+    });
+    return newRow;
+}
 
 // ===========================
 // 1. TEMPLATE DOWNLOAD
@@ -34,43 +51,75 @@ function downloadTemplate() {
 }
 
 // ===========================
-// 2. CLOUD SYNC
+// 2. CLOUD SYNC & AUTO-SYNC
 // ===========================
-async function syncFromCloud() {
-    const url = document.getElementById("cloudLinkInput").value.trim();
-    if (!url) {
-        alert("Please paste a Direct Download Link first!");
-        return;
+function toggleAutoSync() {
+    const toggle = document.getElementById("autoSyncToggle");
+    const link = document.getElementById("cloudLinkInput").value.trim();
+
+    if (toggle.checked) {
+        if (!link) {
+            alert("Please paste a Link first!");
+            toggle.checked = false;
+            return;
+        }
+        document.getElementById("cloudLinkInput").disabled = true;
+        
+        // Start Interval (Every 60s)
+        syncFromCloud(true); 
+        autoSyncInterval = setInterval(() => { syncFromCloud(true); }, 60000); 
+
+    } else {
+        clearInterval(autoSyncInterval);
+        autoSyncInterval = null;
+        document.getElementById("cloudLinkInput").disabled = false;
+        document.getElementById("lastSyncTime").textContent = "Auto-sync paused.";
     }
+}
+
+async function syncFromCloud(silentMode = false) {
+    const url = document.getElementById("cloudLinkInput").value.trim();
+    if (!url && !silentMode) return alert("Please paste a Link first!");
 
     const btn = document.querySelector(".sync-card button");
-    const originalText = btn.innerHTML;
-    btn.innerHTML = "⏳ Downloading...";
-    btn.disabled = true;
+    if (!silentMode) { btn.innerHTML = "⏳ Downloading..."; btn.disabled = true; }
 
     try {
         const response = await fetch(url);
-        if (!response.ok) throw new Error("Failed to download. Check link.");
+        if (!response.ok) throw new Error("Link failed.");
         
         const arrayBuffer = await response.arrayBuffer();
         const workbook = XLSX.read(new Uint8Array(arrayBuffer), { type: "array" });
         const sheet = workbook.Sheets[workbook.SheetNames[0]];
         const json = XLSX.utils.sheet_to_json(sheet);
 
-        if (json.length === 0) throw new Error("File is empty");
+        if (json.length === 0) throw new Error("File empty");
 
-        const taggedData = json.map(item => ({...item, _source: 'Cloud Sync'}));
-        parsedData = [...parsedData, ...taggedData]; 
+        const validRows = [];
+        json.forEach(rawRow => {
+            const row = normalizeRowKeys(rawRow);
+            if (row.from && row.to) {
+                row._source = 'Cloud Sync';
+                validRows.push(row);
+            }
+        });
+
+        parsedData = [...validRows];
         
-        displayPreview();
-        alert("Synced successfully! Scroll down to confirm upload.");
+        if (silentMode) {
+            await processAndUpload(true); 
+            const now = new Date();
+            document.getElementById("lastSyncTime").textContent = `Last synced: ${now.toLocaleTimeString()}`;
+        } else {
+            displayPreview();
+            alert(`Synced ${validRows.length} routes!`);
+        }
 
     } catch (err) {
         console.error(err);
-        alert("Sync Failed: " + err.message);
+        if(!silentMode) alert("Sync Failed: " + err.message);
     } finally {
-        btn.innerHTML = originalText;
-        btn.disabled = false;
+        if (!silentMode) { btn.innerHTML = "<span>🔄</span> Sync Now"; btn.disabled = false; }
     }
 }
 
@@ -88,10 +137,16 @@ function handleFileSelect(event) {
             const sheet = workbook.Sheets[workbook.SheetNames[0]];
             const json = XLSX.utils.sheet_to_json(sheet);
 
-            if (json.length === 0) return alert("Empty File");
+            const validRows = [];
+            json.forEach(rawRow => {
+                const row = normalizeRowKeys(rawRow);
+                if (row.from && row.to) {
+                    row._source = 'Excel Upload';
+                    validRows.push(row);
+                }
+            });
 
-            const taggedData = json.map(item => ({...item, _source: 'Excel Upload'}));
-            parsedData = [...parsedData, ...taggedData];
+            parsedData = [...parsedData, ...validRows];
             displayPreview();
         } catch (err) {
             alert("Error parsing file");
@@ -150,19 +205,20 @@ function addManualToQueue() {
         to: to,
         distance_km: distance || 0,
         fare: fare,
-        stops: stops, // Optional, can be empty
+        stops: stops, 
         _source: 'Manual Form'
     });
     
     displayPreview();
     
-    // Clear inputs
     document.getElementById("manualRouteNo").value = "";
     document.getElementById("manualFrom").value = "";
     document.getElementById("manualTo").value = "";
     document.getElementById("manualFare").value = "";
     document.getElementById("manualDistance").value = "";
     document.getElementById("manualStops").value = "";
+    
+    document.getElementById("previewSection").scrollIntoView({behavior: "smooth"});
 }
 
 // ===========================
@@ -171,10 +227,10 @@ function addManualToQueue() {
 function displayPreview() {
     const tbody = document.getElementById("previewBody");
     const section = document.getElementById("previewSection");
-    const actions = document.getElementById("actionButtons"); // Select the button wrapper
+    const actions = document.getElementById("actionButtons");
     
     tbody.innerHTML = "";
-    parsedData.slice(0, 10).forEach(row => {
+    parsedData.slice(0, 20).forEach(row => {
         let cls = 'badge-excel';
         if(row._source === 'Manual Form') cls = 'badge-manual';
         if(row._source === 'Cloud Sync') cls = 'badge-cloud'; 
@@ -196,9 +252,7 @@ function displayPreview() {
     
     if(parsedData.length > 0) {
         section.style.display = "block";
-        actions.style.display = "flex"; // FORCE SHOW BUTTONS
-        
-        // Auto-scroll to the buttons so the user sees them
+        actions.style.display = "flex"; 
         actions.scrollIntoView({ behavior: 'smooth', block: 'center' });
     }
 }
@@ -237,29 +291,32 @@ async function getRoutePolyline(start, end) {
 }
 
 // ===========================
-// PROCESS & UPLOAD (ALL SOURCES)
+// PROCESS & UPLOAD
 // ===========================
-async function processAndUpload() {
+async function processAndUpload(silentMode = false) {
     const user = auth.currentUser;
-    if (!user) return alert("Please Login First");
+    if (!user) return silentMode ? null : alert("Please Login First");
 
-    document.getElementById("previewSection").style.display = "none";
-    document.getElementById("progressSection").style.display = "block";
-    
-    addLog("🚀 Starting Processing...", "info");
+    if (!silentMode) {
+        document.getElementById("previewSection").style.display = "none";
+        document.getElementById("progressSection").style.display = "block";
+        addLog("🚀 Starting Processing...", "info");
+    }
+
     let updated = 0, created = 0, errors = 0;
 
     for (let i = 0; i < parsedData.length; i++) {
         const row = parsedData[i];
-        const pct = Math.round(((i + 1) / parsedData.length) * 100);
-        document.getElementById("progressBar").style.width = pct + "%";
-        document.getElementById("progressBar").querySelector("span").innerText = pct + "%";
+        if (!silentMode) {
+            const pct = Math.round(((i + 1) / parsedData.length) * 100);
+            document.getElementById("progressBar").style.width = pct + "%";
+            document.getElementById("progressBar").querySelector("span").innerText = pct + "%";
+        }
 
         try {
             let docId = null;
             let oldData = null;
             
-            // Check Exists
             if(row.route_number) {
                 const snap = await db.collection("bus_routes").where("route_number", "==", String(row.route_number)).limit(1).get();
                 if(!snap.empty) { docId = snap.docs[0].id; oldData = snap.docs[0].data(); }
@@ -279,11 +336,10 @@ async function processAndUpload() {
                 upload_method: row._source
             };
 
-            // Smart Update Logic
             let doMap = true;
             if(docId && oldData.from === row.from && oldData.to === row.to && oldData.polyline_lats) {
                 doMap = false;
-                addLog(`Updating details: ${row.route_number}`, "info");
+                if(!silentMode) addLog(`Updating: ${row.route_number}`, "info");
             }
 
             if(doMap) {
@@ -316,12 +372,14 @@ async function processAndUpload() {
 
         } catch (e) {
             errors++;
-            addLog(`Failed ${row.route_number}: ${e.message}`, "error");
+            if(!silentMode) addLog(`Failed ${row.route_number}: ${e.message}`, "error");
         }
     }
     
-    addLog(`Done! Updated: ${updated}, Created: ${created}, Errors: ${errors}`, "success");
-    document.getElementById("progressBar").style.background = "#4caf50";
+    if(!silentMode) {
+        addLog(`Done! Updated: ${updated}, Created: ${created}, Errors: ${errors}`, "success");
+        document.getElementById("progressBar").style.background = "#4caf50";
+    }
 }
 
 function addLog(msg, type) {
