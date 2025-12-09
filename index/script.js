@@ -417,7 +417,7 @@ function updateCriticalAlerts() {
              <p style="font-weight:bold; color:#991b1b; margin:0;">Bus ${busNum}</p>
              <span style="background:#ef4444; color:white; padding:2px 8px; border-radius:10px; font-size:11px; font-weight:700;">${count} ALERTS</span>
           </div>
-          <button onclick="window.location.href='../help desk/helpDesk.html?bus=${encodeURIComponent(busNum)}'" style="background:#ef4444; color:white; border:none; padding:5px 10px; border-radius:4px; cursor:pointer;">View</button>
+          <button  onclick="window.location.href='../help desk/helpDesk.html?bus=${encodeURIComponent(busNum)}'" style="background:#ef4444; color:white; border:none; padding:5px 10px; border-radius:13px;cursor:pointer;">View</button>
         </div>
       </div>`;
   }).join('');
