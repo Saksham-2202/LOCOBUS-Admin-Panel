@@ -1,4 +1,4 @@
-/* notifications.css - Enhanced with target selection */
+/* notifications.css - Enhanced with target selection and email notifications */
 
 * { box-sizing:border-box; margin:0; padding:0; font-family:Inter, Arial, sans-serif; }
 body { background:#f6f8fb; color:#111; }
@@ -25,7 +25,7 @@ body { background:#f6f8fb; color:#111; }
   gap: 8px; 
 }
 .bus-logo {
-  width: 50px;   /* change size if you want bigger/smaller */
+  width: 50px;
   height: 43px;
 }
 .menu {
@@ -75,7 +75,7 @@ body { background:#f6f8fb; color:#111; }
 .global-search { padding:8px 12px; border-radius:10px; border:1px solid #e6edf6; min-width:220px; }
 
 /* grid layout */
-.grid { display:grid; grid-template-columns: 1fr 360px; gap:18px; align-items:start; }
+.grid { display:grid; grid-template-columns: 1fr 360px; gap:18px; align-items:start; margin-bottom: 24px; }
 
 /* card */
 .card { background:#fff; border-radius:10px; padding:18px; box-shadow:0 2px 8px rgba(3,10,25,0.04); }
@@ -173,10 +173,22 @@ body { background:#f6f8fb; color:#111; }
 
 /* actions */
 .actions-row { display:flex; gap:12px; margin-top:14px; }
-.btn-primary { background:#0b58d0; color:#fff; padding:10px 14px; border-radius:10px; border:none; cursor:pointer; font-weight:600; }
+.btn-primary { 
+  background:#0b58d0; 
+  color:#fff; 
+  padding:10px 14px; 
+  border-radius:10px; 
+  border:none; 
+  cursor:pointer; 
+  font-weight:600;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  transition: all 0.2s ease;
+}
 .btn-primary.ghost { background:#fff; color:#374151; border:1px solid #e6edf6; }
-.btn-primary:hover { opacity: 0.9; }
-.btn-primary:disabled { opacity: 0.5; cursor: not-allowed; }
+.btn-primary:hover { opacity: 0.9; transform: translateY(-1px); }
+.btn-primary:disabled { opacity: 0.5; cursor: not-allowed; transform: none; }
 
 /* recent card */
 .recent-header {
@@ -227,11 +239,149 @@ body { background:#f6f8fb; color:#111; }
 .view-detail { font-size:12px; color:#0b58d0; text-decoration:none; cursor:pointer; font-weight: 600; }
 .view-detail:hover { text-decoration: underline; }
 
+/* ============ EMAIL NOTIFICATION SECTION ============ */
+
+.email-notification-card {
+  margin-top: 24px;
+  border-left: 4px solid #0b58d0;
+}
+
+.section-header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 20px;
+  padding-bottom: 16px;
+  border-bottom: 1px solid #f0f0f0;
+}
+
+.section-icon {
+  font-size: 32px;
+  line-height: 1;
+}
+
+.section-header h3 {
+  margin: 0;
+  font-size: 20px;
+  color: #111827;
+}
+
+.section-subtitle {
+  color: #6b7280;
+  font-size: 14px;
+  margin-top: 4px;
+}
+
+.email-form-grid {
+  display: grid;
+  grid-template-columns: 1fr 280px;
+  gap: 24px;
+}
+
+.email-form-main {
+  display: flex;
+  flex-direction: column;
+}
+
+.email-textarea {
+  min-height: 150px;
+}
+
+.email-chips {
+  min-height: 80px;
+  resize: vertical;
+  font-family: 'Courier New', monospace;
+  font-size: 13px;
+  line-height: 1.6;
+}
+
+.email-hint {
+  font-size: 12px;
+  color: #6b7280;
+  margin-top: 8px;
+  padding: 8px 12px;
+  background: #f9fafb;
+  border-radius: 6px;
+  border-left: 3px solid #fbbf24;
+}
+
+/* Email Sidebar */
+.email-form-sidebar {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.email-preview-card,
+.email-tips-card {
+  background: #f9fafb;
+  border-radius: 10px;
+  padding: 16px;
+  border: 1px solid #e5e7eb;
+}
+
+.email-preview-card h4,
+.email-tips-card h4 {
+  font-size: 14px;
+  margin-bottom: 12px;
+  color: #374151;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.preview-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 8px 0;
+  border-bottom: 1px solid #e5e7eb;
+}
+
+.preview-item:last-child {
+  border-bottom: none;
+}
+
+.preview-label {
+  font-size: 12px;
+  color: #6b7280;
+  font-weight: 600;
+}
+
+.preview-value {
+  font-size: 13px;
+  color: #111827;
+  font-weight: 600;
+}
+
+.tips-list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+.tips-list li {
+  font-size: 12px;
+  color: #6b7280;
+  padding: 6px 0;
+  padding-left: 20px;
+  position: relative;
+}
+
+.tips-list li::before {
+  content: "✓";
+  position: absolute;
+  left: 0;
+  color: #10b981;
+  font-weight: 700;
+}
+
 /* responsive */
 @media (max-width:980px) {
   .grid { grid-template-columns: 1fr; }
   .sidebar { display:none; }
   .target-selector { grid-template-columns: 1fr; }
+  .email-form-grid { grid-template-columns: 1fr; }
 }
 
 /* Notification details modal */
@@ -271,8 +421,6 @@ body { background:#f6f8fb; color:#111; }
   .notif-modal { width:calc(100% - 48px); padding:14px; }
   .nm-flex { flex-direction:column; gap:8px; }
 }
-
-/* Add to notifications.css */
 
 .action-row {
   display: flex;

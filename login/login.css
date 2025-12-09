@@ -12,13 +12,15 @@ body {
   min-height: 100vh;
   background: radial-gradient(circle at top left, #e3edff 0, #f6f8fb 55%, #eef2ff 100%);
   color: #111827;
+  display: flex;
+  flex-direction: column;
 }
 
 /* ============ LAYOUT ============ */
 
 .login-layout {
   display: flex;
-  min-height: 100vh;
+  flex: 1;
 }
 
 /* ============ LEFT SIDE (BRAND PANEL) ============ */
@@ -140,7 +142,7 @@ body {
 
 /* card */
 .login-card {
-  position: relative;          /* ✅ add this */
+  position: relative;
   width: 100%;
   max-width: 520px;
   background: rgba(255, 255, 255, 0.96);
@@ -167,9 +169,8 @@ body {
     linear-gradient(#000 0 0);
   -webkit-mask-composite: xor;
           mask-composite: exclude;
-  pointer-events: none;        /* ✅ add this */
+  pointer-events: none;
 }
-
 
 /* heading */
 .login-card h2 {
@@ -311,6 +312,39 @@ body {
   font-size: 12px;
 }
 
+/* ============ LOGO BANNER AT BOTTOM ============ */
+
+.logo-banner {
+  background: white;
+  border-top: 1px solid #e5e7eb;
+  padding: 20px 0;
+  width: 100%;
+}
+
+.logo-banner-container {
+  max-width: 1200px;
+  margin: 0 auto;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 40px;
+  flex-wrap: wrap;
+  padding: 0 20px;
+}
+
+.banner-logo {
+  height: 60px;
+  width: auto;
+  object-fit: contain;
+  opacity: 0.85;
+  transition: opacity 0.3s ease, transform 0.3s ease;
+}
+
+.banner-logo:hover {
+  opacity: 1;
+  transform: scale(1.05);
+}
+
 /* ============ ANIMATIONS ============ */
 
 @keyframes cardFloatIn {
@@ -346,5 +380,23 @@ body {
     max-width: 100%;
     padding: 22px 18px 18px;
     border-radius: 16px;
+  }
+
+  .logo-banner-container {
+    gap: 25px;
+  }
+
+  .banner-logo {
+    height: 45px;
+  }
+}
+
+@media (max-width: 600px) {
+  .logo-banner-container {
+    gap: 20px;
+  }
+
+  .banner-logo {
+    height: 40px;
   }
 }
