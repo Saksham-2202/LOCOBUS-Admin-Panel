@@ -1,11 +1,10 @@
-// live-map.js - Routes & Live Bus Tracking
+// live-map.js - Routes & Live Bus Tracking (Redesigned with Top Bar)
 import { initializeApp } from "https://www.gstatic.com/firebasejs/9.23.0/firebase-app.js";
 import { 
   getFirestore,
   collection,
   onSnapshot,
-  getDocs,
-  query
+  getDocs
 } from "https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore.js";
 
 // Firebase Configuration
@@ -30,7 +29,7 @@ if (typeof L === 'undefined') {
 }
 
 // Initialize Map
-const map = L.map('map').setView([30.9009, 75.8573], 12); // Ludhiana center
+const map = L.map('map').setView([30.9009, 75.8573], 12);
 
 L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
   maxZoom: 19,
@@ -38,10 +37,21 @@ L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
 }).addTo(map);
 
 // State Management
-const routes = new Map(); // routeId -> { polyline, stops, data, buses }
-const liveBuses = new Map(); // busId -> { marker, data }
+const routes = new Map();
+const liveBuses = new Map();
 let selectedRoute = null;
-let processedRouteIds = new Set(); // Track processed routes
+let processedRouteIds = new Set();
+let allRoutes = []; // Store all routes for search/filter
+let filteredRoutes = []; // Currently filtered routes
+let currentPage = 0;
+const CARDS_PER_PAGE = 3;
+
+// DOM Elements
+const routeCardsContainer = document.getElementById('routeCardsContainer');
+const routeSearch = document.getElementById('routeSearch');
+const navPrev = document.getElementById('navPrev');
+const navNext = document.getElementById('navNext');
+const paginationText = document.getElementById('paginationText');
 
 // ============ UTILITY FUNCTIONS ============
 
@@ -66,15 +76,6 @@ function createBusIcon(data) {
   });
 }
 
-function createStopIcon() {
-  return L.divIcon({
-    html: '<div style="width:12px;height:12px;background:#2563eb;border:3px solid white;border-radius:50%;box-shadow:0 2px 8px rgba(0,0,0,0.3);"></div>',
-    className: '',
-    iconSize: [18, 18],
-    iconAnchor: [9, 9]
-  });
-}
-
 // ============ ROUTE RENDERING ============
 
 function startRouteListener() {
@@ -83,35 +84,22 @@ function startRouteListener() {
     
     console.log('🔍 Starting route listener...');
     
-    // Listen to route changes in real-time
     onSnapshot(routesRef, async (snapshot) => {
-      console.log(`📍 Routes snapshot received: ${snapshot.docs.length} total routes in database`);
+      console.log(`📍 Routes snapshot received: ${snapshot.docs.length} routes`);
       
       if (snapshot.docs.length === 0) {
-        console.warn('⚠️ No routes found in bus_routes collection');
+        routeCardsContainer.innerHTML = '<div class="route-card-loading">No routes found</div>';
         return;
       }
-      
-      let newRoutesCount = 0;
-      let processedCount = 0;
       
       for (const docSnap of snapshot.docs) {
         const routeId = docSnap.id;
         const routeData = docSnap.data();
 
-        console.log(`\n--- Processing Route ${routeId} ---`);
-        console.log('Route Data:', routeData);
+        if (processedRouteIds.has(routeId)) continue;
 
-        // Skip if already processed
-        if (processedRouteIds.has(routeId)) {
-          console.log(`✓ Route ${routeId} already processed, skipping`);
-          processedCount++;
-          continue;
-        }
-
-        // Check if route has polyline data (from bulk upload)
+        // Check polyline data
         if (routeData.polyline_lats && routeData.polyline_lngs) {
-          console.log(`✅ Route ${routeId} has polyline data (${routeData.polyline_lats.length} points)`);
           const lats = routeData.polyline_lats;
           const lngs = routeData.polyline_lngs;
           
@@ -127,23 +115,17 @@ function startRouteListener() {
           
           renderRoute(routeId, routeData, stops);
           processedRouteIds.add(routeId);
-          newRoutesCount++;
-          console.log(`✅ Route rendered from polyline: ${routeData.from} → ${routeData.to}`);
           continue;
         }
 
-        // Otherwise, try to get stops subcollection
+        // Otherwise check stops subcollection
         try {
-          console.log(`🔍 Checking stops subcollection for route ${routeId}...`);
           const stopsRef = collection(db, 'bus_routes', routeId, 'stops');
           const stopsSnapshot = await getDocs(stopsRef);
-          
-          console.log(`Found ${stopsSnapshot.docs.length} stops in subcollection`);
           
           const stops = [];
           stopsSnapshot.forEach(stopDoc => {
             const stopData = stopDoc.data();
-            console.log('Stop data:', stopData);
             if (stopData.lat && stopData.lng) {
               stops.push({
                 id: stopDoc.id,
@@ -152,61 +134,38 @@ function startRouteListener() {
             }
           });
 
-          // Sort stops by order
           stops.sort((a, b) => (a.order || 0) - (b.order || 0));
 
           if (stops.length > 0) {
             renderRoute(routeId, routeData, stops);
             processedRouteIds.add(routeId);
-            newRoutesCount++;
-            console.log(`✅ Route rendered from stops subcollection: ${routeData.from} → ${routeData.to}`);
-          } else {
-            console.warn(`⚠️ Route ${routeId} has no valid stops (found ${stopsSnapshot.docs.length} stop docs but 0 with lat/lng)`);
           }
         } catch (error) {
-          console.error(`❌ Error getting stops for route ${routeId}:`, error);
+          console.error(`Error getting stops for route ${routeId}:`, error);
         }
       }
       
-      console.log(`\n📊 SUMMARY:`);
-      console.log(`- Total routes in DB: ${snapshot.docs.length}`);
-      console.log(`- Already processed: ${processedCount}`);
-      console.log(`- Newly rendered: ${newRoutesCount}`);
-      console.log(`- Total on map: ${routes.size}`);
-      console.log(`- Sidebar items: ${document.querySelectorAll('.bus-card').length}`);
-      
-      // Fit map to show all routes
-      if (newRoutesCount > 0) {
-        fitAllRoutesToMap();
-      }
+      updateRouteDisplay();
+      fitAllRoutesToMap();
     }, (error) => {
-      console.error('❌ Error listening to routes:', error);
-      alert('Failed to load routes: ' + error.message);
+      console.error('Error listening to routes:', error);
     });
   } catch (error) {
-    console.error('❌ Error starting route listener:', error);
+    console.error('Error starting route listener:', error);
   }
 }
 
 function renderRoute(routeId, routeData, stops) {
-  if (!stops || stops.length === 0) {
-    console.warn(`❌ Cannot render route ${routeId}: no stops`);
-    return;
-  }
+  if (!stops || stops.length === 0) return;
 
-  console.log(`🎨 Rendering route ${routeId} with ${stops.length} stops`);
-
-  // Create polyline coordinates
   const coords = stops.map(s => [s.lat, s.lng]);
 
-  // Draw route polyline (light blue)
   const polyline = L.polyline(coords, {
     color: '#93c5fd',
     weight: 4,
     opacity: 0.7
   }).addTo(map);
 
-  // Add stops as markers (only show first and last for cleaner map)
   const stopMarkers = [];
   
   // First stop (green)
@@ -248,85 +207,39 @@ function renderRoute(routeId, routeData, stops) {
     stopMarkers.push(lastMarker);
   }
 
-  // Click on route to highlight
   polyline.on('click', () => highlightRoute(routeId));
 
-  // Store route data
   routes.set(routeId, {
     polyline,
     stops: stopMarkers,
     data: routeData,
-    buses: [], // Will store bus IDs on this route
+    buses: [],
     rawStops: stops
   });
 
-  // Add to sidebar list
-  addRouteToList(routeId, routeData);
-  
-  console.log(`✅ Route ${routeId} successfully added to map and sidebar`);
+  allRoutes.push({ id: routeId, data: routeData, stops });
+  filteredRoutes = [...allRoutes];
 }
 
 function highlightRoute(routeId) {
-  // Reset all routes to light blue
-  routes.forEach((route) => {
+  routes.forEach((route, id) => {
+    const isSelected = id === routeId;
     route.polyline.setStyle({
-      color: '#93c5fd',
-      weight: 4,
-      opacity: 0.7
+      color: isSelected ? '#2563eb' : '#93c5fd',
+      weight: isSelected ? 6 : 4,
+      opacity: isSelected ? 1 : 0.7
     });
-  });
-
-  // Highlight selected route
-  const route = routes.get(routeId);
-  if (!route) return;
-
-  route.polyline.setStyle({
-    color: '#2563eb',
-    weight: 6,
-    opacity: 1
   });
 
   selectedRoute = routeId;
 
-  // Zoom to route
+  const route = routes.get(routeId);
+  if (!route) return;
+
   const coords = route.rawStops.map(s => [s.lat, s.lng]);
   map.fitBounds(L.latLngBounds(coords).pad(0.1));
 
-  console.log(`🎯 Selected route: ${routeId}`);
-}
-
-function addRouteToList(routeId, routeData) {
-  const listEl = document.getElementById('list');
-  if (!listEl) {
-    console.error('❌ Could not find #list element in DOM');
-    return;
-  }
-
-  // Check if already exists
-  const existingEl = document.getElementById('route-' + routeId);
-  if (existingEl) {
-    console.log(`Route ${routeId} already in sidebar, skipping`);
-    return;
-  }
-
-  const el = document.createElement('div');
-  el.id = 'route-' + routeId;
-  el.className = 'bus-card';
-  el.style.cursor = 'pointer';
-  
-  el.innerHTML = `
-    <div style="width:10px;height:10px;background:#93c5fd;border-radius:50%"></div>
-    <div class="bus-info">
-      <div>${escapeHtml(routeData.from || 'Unknown')} → ${escapeHtml(routeData.to || 'Unknown')}</div>
-      <div class="bus-sub">${routeData.distance_km ? routeData.distance_km.toFixed(1) + ' km' : 'N/A'} • Route ${escapeHtml(routeData.route_number || 'N/A')}</div>
-    </div>
-    <div style="font-weight:700;font-size:12px;color:#666;" id="bus-count-${routeId}">0 buses</div>
-  `;
-
-  el.onclick = () => highlightRoute(routeId);
-  listEl.appendChild(el);
-  
-  console.log(`✅ Route ${routeId} added to sidebar (#${listEl.children.length})`);
+  updateRouteDisplay();
 }
 
 function fitAllRoutesToMap() {
@@ -338,9 +251,114 @@ function fitAllRoutesToMap() {
 
   if (allCoords.length > 0) {
     map.fitBounds(L.latLngBounds(allCoords).pad(0.1));
-    console.log(`✅ Fitted ${routes.size} routes to map`);
   }
 }
+
+// ============ TOP BAR DISPLAY FUNCTIONS ============
+
+function updateRouteDisplay() {
+  const startIdx = currentPage * CARDS_PER_PAGE;
+  const endIdx = startIdx + CARDS_PER_PAGE;
+  const pageRoutes = filteredRoutes.slice(startIdx, endIdx);
+
+  if (filteredRoutes.length === 0) {
+    routeCardsContainer.innerHTML = '<div class="route-card-loading">No routes match your search</div>';
+    updatePaginationControls();
+    return;
+  }
+
+  routeCardsContainer.innerHTML = pageRoutes.map(({ id, data }) => {
+    const route = routes.get(id);
+    const busCount = route ? route.buses.length : 0;
+    const isActive = id === selectedRoute;
+    
+    return `
+      <div class="route-card ${isActive ? 'active' : ''}" data-route-id="${id}">
+        <div class="route-card-header">
+          <div class="route-indicator"></div>
+          <div class="route-number">Route ${escapeHtml(data.route_number || 'N/A')}</div>
+        </div>
+        <div class="route-card-body">
+          <div class="route-path">
+            <span>${escapeHtml(data.from || 'Unknown')}</span>
+            <span class="route-arrow">→</span>
+            <span>${escapeHtml(data.to || 'Unknown')}</span>
+          </div>
+          <div class="route-meta">
+            <span>${data.distance_km ? data.distance_km.toFixed(1) + ' km' : 'N/A'}</span>
+            <span class="bus-count">${busCount} ${busCount === 1 ? 'bus' : 'buses'}</span>
+          </div>
+        </div>
+      </div>
+    `;
+  }).join('');
+
+  // Add click handlers
+  document.querySelectorAll('.route-card').forEach(card => {
+    card.addEventListener('click', () => {
+      const routeId = card.getAttribute('data-route-id');
+      highlightRoute(routeId);
+    });
+  });
+
+  updatePaginationControls();
+}
+
+function updatePaginationControls() {
+  const totalPages = Math.ceil(filteredRoutes.length / CARDS_PER_PAGE);
+  
+  navPrev.disabled = currentPage === 0;
+  navNext.disabled = currentPage >= totalPages - 1 || filteredRoutes.length === 0;
+  
+  const startIdx = currentPage * CARDS_PER_PAGE + 1;
+  const endIdx = Math.min((currentPage + 1) * CARDS_PER_PAGE, filteredRoutes.length);
+  
+  if (filteredRoutes.length === 0) {
+    paginationText.textContent = 'No routes found';
+  } else {
+    paginationText.textContent = `Showing ${startIdx}-${endIdx} of ${filteredRoutes.length} routes`;
+  }
+}
+
+// ============ SEARCH & PAGINATION ============
+
+routeSearch.addEventListener('input', (e) => {
+  const searchTerm = e.target.value.toLowerCase().trim();
+  
+  if (!searchTerm) {
+    filteredRoutes = [...allRoutes];
+  } else {
+    filteredRoutes = allRoutes.filter(({ data }) => {
+      const from = (data.from || '').toLowerCase();
+      const to = (data.to || '').toLowerCase();
+      const routeNum = (data.route_number || '').toLowerCase();
+      
+      return from.includes(searchTerm) || 
+             to.includes(searchTerm) || 
+             routeNum.includes(searchTerm);
+    });
+  }
+  
+  currentPage = 0;
+  updateRouteDisplay();
+});
+
+navPrev.addEventListener('click', () => {
+  if (currentPage > 0) {
+    currentPage--;
+    updateRouteDisplay();
+    routeCardsContainer.scrollLeft = 0;
+  }
+});
+
+navNext.addEventListener('click', () => {
+  const totalPages = Math.ceil(filteredRoutes.length / CARDS_PER_PAGE);
+  if (currentPage < totalPages - 1) {
+    currentPage++;
+    updateRouteDisplay();
+    routeCardsContainer.scrollLeft = 0;
+  }
+});
 
 // ============ LIVE BUS TRACKING ============
 
@@ -348,13 +366,10 @@ function startLiveBusListener() {
   const busesRef = collection(db, 'buses');
 
   onSnapshot(busesRef, (snapshot) => {
-    let activeBusCount = 0;
-    
     snapshot.forEach(docSnap => {
       const busId = docSnap.id;
       const busData = docSnap.data();
 
-      // Check if bus has live location OR use routeInfo stops as fallback
       if (busData.liveStatus?.location) {
         const loc = busData.liveStatus.location;
         updateBusPosition(busId, {
@@ -367,9 +382,7 @@ function startLiveBusListener() {
           route: `${busData.routeInfo?.from || 'N/A'} → ${busData.routeInfo?.to || 'N/A'}`,
           timestamp: loc.timestamp
         });
-        activeBusCount++;
       } else if (busData.routeInfo?.stops && busData.routeInfo.stops.length > 0) {
-        // Fallback: Use first stop location if no live data
         const firstStop = busData.routeInfo.stops[0];
         if (firstStop.location) {
           const geoPoint = firstStop.location;
@@ -383,15 +396,11 @@ function startLiveBusListener() {
             route: `${busData.routeInfo?.from || 'N/A'} → ${busData.routeInfo?.to || 'N/A'}`,
             timestamp: busData.createdAt
           });
-          activeBusCount++;
         }
       }
     });
 
-    console.log(`🚌 Active buses on map: ${activeBusCount}`);
     updateBusCountsOnRoutes();
-  }, (error) => {
-    console.error('Error listening to buses:', error);
   });
 }
 
@@ -401,7 +410,6 @@ function updateBusPosition(busId, data) {
   const existing = liveBuses.get(busId);
 
   if (!existing) {
-    // Create new bus marker
     const marker = L.marker([data.lat, data.lng], {
       icon: createBusIcon(data)
     }).addTo(map);
@@ -415,19 +423,15 @@ function updateBusPosition(busId, data) {
 
     liveBuses.set(busId, { marker, data });
   } else {
-    // Update existing marker
     const oldData = existing.data;
     existing.data = { ...oldData, ...data };
 
-    // Update icon if status changed
     if (oldData.status !== data.status) {
       existing.marker.setIcon(createBusIcon(data));
     }
 
-    // Animate position change
     animateMarker(existing.marker, [oldData.lat, oldData.lng], [data.lat, data.lng]);
 
-    // Update popup
     existing.marker.setPopupContent(`
       <div style="font-weight:600;">Bus ${escapeHtml(data.busId)}</div>
       <div style="font-size:12px;">Route: ${escapeHtml(data.route)}</div>
@@ -441,7 +445,7 @@ function animateMarker(marker, from, to, duration = 1000) {
   const start = performance.now();
   function step(now) {
     const t = Math.min(1, (now - start) / duration);
-    const e = t < 0.5 ? 2 * t * t : -1 + (4 - 2 * t) * t; // ease in-out
+    const e = t < 0.5 ? 2 * t * t : -1 + (4 - 2 * t) * t;
     marker.setLatLng([
       from[0] + (to[0] - from[0]) * e,
       from[1] + (to[1] - from[1]) * e
@@ -452,14 +456,10 @@ function animateMarker(marker, from, to, duration = 1000) {
 }
 
 function updateBusCountsOnRoutes() {
-  // Reset all counts
-  routes.forEach((route, routeId) => {
+  routes.forEach((route) => {
     route.buses = [];
-    const countEl = document.getElementById('bus-count-' + routeId);
-    if (countEl) countEl.textContent = '0 buses';
   });
 
-  // Count buses per route
   liveBuses.forEach((bus) => {
     const routeId = bus.data.routeId;
     if (routeId && routes.has(routeId)) {
@@ -467,115 +467,20 @@ function updateBusCountsOnRoutes() {
     }
   });
 
-  // Update UI
-  routes.forEach((route, routeId) => {
-    const countEl = document.getElementById('bus-count-' + routeId);
-    if (countEl) {
-      const count = route.buses.length;
-      countEl.textContent = `${count} ${count === 1 ? 'bus' : 'buses'}`;
-    }
-  });
+  updateRouteDisplay();
 }
-
-// ============ CONTROLS ============
-
-document.getElementById('fitAll')?.addEventListener('click', () => {
-  fitAllRoutesToMap();
-});
-
-// Simulate button - adds test buses for debugging
-let simInterval = null;
-
-document.getElementById('simulate')?.addEventListener('click', function() {
-  if (simInterval) {
-    clearInterval(simInterval);
-    simInterval = null;
-    this.textContent = 'Simulate';
-    this.style.background = '#2563eb';
-    console.log('Simulation stopped');
-    return;
-  }
-
-  this.textContent = 'Stop Sim';
-  this.style.background = '#ef4444';
-
-  // Add 3 test buses on random routes
-  const routeIds = Array.from(routes.keys());
-  if (routeIds.length === 0) {
-    alert('No routes available for simulation');
-    return;
-  }
-
-  const testBuses = [
-    { id: 'SIM-001', routeIdx: 0, speed: 35 },
-    { id: 'SIM-002', routeIdx: Math.min(1, routeIds.length - 1), speed: 28 },
-    { id: 'SIM-003', routeIdx: Math.min(2, routeIds.length - 1), speed: 0 }
-  ];
-
-  testBuses.forEach(bus => {
-    const routeId = routeIds[bus.routeIdx];
-    const route = routes.get(routeId);
-    if (route && route.rawStops.length > 0) {
-      const firstStop = route.rawStops[0];
-      updateBusPosition(bus.id, {
-        busId: bus.id,
-        lat: firstStop.lat,
-        lng: firstStop.lng,
-        status: bus.speed > 0 ? 'running' : 'idle',
-        speed: bus.speed,
-        routeId: routeId,
-        route: `${route.data.from} → ${route.data.to}`,
-        timestamp: Date.now()
-      });
-    }
-  });
-
-  // Move buses randomly
-  simInterval = setInterval(() => {
-    testBuses.forEach(bus => {
-      const existing = liveBuses.get(bus.id);
-      if (!existing) return;
-
-      const jitter = (Math.random() - 0.5) * 0.002;
-      const newLat = existing.data.lat + (Math.random() * 0.002 - 0.001) + jitter;
-      const newLng = existing.data.lng + (Math.random() * 0.002 - 0.001) + jitter;
-      const newSpeed = Math.max(0, bus.speed + (Math.random() * 6 - 3));
-
-      updateBusPosition(bus.id, {
-        ...existing.data,
-        lat: newLat,
-        lng: newLng,
-        speed: newSpeed,
-        status: newSpeed < 1 ? 'idle' : 'running',
-        timestamp: Date.now()
-      });
-    });
-  }, 1500);
-
-  console.log('Simulation started with 3 test buses');
-});
 
 // ============ INITIALIZE ============
 
 async function init() {
   console.log('🚀 Initializing Live Map...');
-  console.log('📍 Checking DOM elements...');
-  console.log('- #map element:', document.getElementById('map') ? '✓ Found' : '❌ Missing');
-  console.log('- #list element:', document.getElementById('list') ? '✓ Found' : '❌ Missing');
-  
-  // Start listening to routes (real-time)
   startRouteListener();
-  
-  // Start listening to live buses
   startLiveBusListener();
-  
-  console.log('✅ Live Map initialized - listening for route updates');
 }
 
-// Start on page load
 document.addEventListener('DOMContentLoaded', init);
 
-// Lottie bus logo animation
+// Lottie bus logo
 document.addEventListener('DOMContentLoaded', () => {
   const logoContainer = document.getElementById('busLogoAnim');
   if (logoContainer && window.lottie) {
@@ -588,5 +493,3 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   }
 });
-
-

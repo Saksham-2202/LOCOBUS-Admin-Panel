@@ -137,6 +137,8 @@ function startBusStatusListener() {
     }
   });
 }
+    const RELIABILITY_PAGE_SIZE = 5;
+    let currentReliabilityPage = 1;
 
 // --- RELIABILITY MODAL ---
 if (reliabilityBox) reliabilityBox.addEventListener('click', openReliabilityModal);
@@ -145,63 +147,245 @@ window.addEventListener('click', (e) => { if (e.target === reliabilityModalOverl
 
 function openReliabilityModal() {
     if (!reliabilityListContainer) return;
+
     fleetReliabilityData.sort((a, b) => b.percentage - a.percentage);
-    reliabilityListContainer.innerHTML = '';
+    currentReliabilityPage = 1; // start at page 1
+    renderReliabilityPage();
 
-    if (fleetReliabilityData.length === 0) {
-        reliabilityListContainer.innerHTML = '<div style="text-align:center; padding:20px; color:#999;">No bus data available.</div>';
-    } else {
-        fleetReliabilityData.forEach(bus => {
-            const pct = Math.round(bus.percentage);
-            let colorStr = pct >= 80 ? '#10b981' : (pct >= 50 ? '#f59e0b' : '#ef4444');
-            if (bus.votes === 0) colorStr = '#9ca3af';
-            const percentageText = bus.votes === 0 ? 'No Data' : `${pct}%`;
-
-            reliabilityListContainer.innerHTML += `
-                <div style="display:flex; justify-content:space-between; align-items:center; padding: 12px 10px; border-bottom: 1px solid #f3f4f6;">
-                    <div style="display:flex; align-items:center; gap:12px;">
-                        <span style="background:#e0e7ff; color:#3730a3; padding:6px 12px; border-radius:6px; font-weight:700; font-size:14px;">${bus.busNumber}</span>
-                        <span style="font-size:12px; color:#6b7280;">(${bus.votes} votes)</span>
-                    </div>
-                    <div style="font-weight:700; color:${colorStr}; font-size:16px;">${percentageText}</div>
-                </div>`;
-        });
-    }
     reliabilityModalOverlay.style.display = 'flex';
 }
 
+function renderReliabilityPage() {
+    if (!reliabilityListContainer) return;
+
+    const totalItems = fleetReliabilityData.length;
+    const totalPages = Math.max(1, Math.ceil(totalItems / RELIABILITY_PAGE_SIZE));
+
+    if (currentReliabilityPage > totalPages) currentReliabilityPage = totalPages;
+
+    if (totalItems === 0) {
+        reliabilityListContainer.innerHTML = `
+            <div style="text-align:center; padding:25px; font-size:18px; color:#999;">
+                No bus data available.
+            </div>`;
+        return;
+    }
+
+    const startIndex = (currentReliabilityPage - 1) * RELIABILITY_PAGE_SIZE;
+    const pageItems = fleetReliabilityData.slice(startIndex, startIndex + RELIABILITY_PAGE_SIZE);
+
+    let html = '';
+
+    pageItems.forEach(bus => {
+        const pct = Math.round(bus.percentage);
+
+        let colorStr = pct >= 80 ? '#10b981' : (pct >= 50 ? '#f59e0b' : '#ef4444');
+        if (bus.votes === 0) colorStr = '#9ca3af';
+
+        const percentageText = bus.votes === 0 ? 'No Data' : `${pct}%`;
+
+        html += `
+            <div style="
+                display:flex;
+                justify-content:space-between;
+                align-items:center;
+                padding: 16px 14px;
+                border-bottom: 1px solid #f3f4f6;
+                font-size: 18px;
+            ">
+                <div style="display:flex; align-items:center; gap:14px;">
+                    <span style="
+                        background:#e0e7ff;
+                        color:#3730a3;
+                        padding:8px 14px;
+                        border-radius:6px;
+                        font-weight:700;
+                        font-size:17px;
+                    ">${bus.busNumber}</span>
+
+                    <span style="font-size:15px; color:#6b7280;">
+                        (${bus.votes} votes)
+                    </span>
+                </div>
+
+                <div style="font-weight:700; color:${colorStr}; font-size:18px;">
+                    ${percentageText}
+                </div>
+            </div>`;
+    });
+
+    // Pagination footer
+    html += `
+        <div style="
+            display:flex;
+            justify-content:space-between;
+            align-items:center;
+            padding:14px 14px;
+            font-size:16px;
+            margin-top:8px;
+            color:#6b7280;
+        ">
+            <span>Showing page ${currentReliabilityPage} of ${totalPages}</span>
+
+            <div style="display:flex; gap:10px;">
+                <button id="reliabilityPrevPage"
+                        ${currentReliabilityPage === 1 ? 'disabled' : ''}
+                        style="
+                            padding:8px 14px;
+                            border-radius:6px;
+                            border:1px solid #d1d5db;
+                            background:#fff;
+                            cursor:pointer;
+                            font-size:15px;
+                        ">
+                    Previous
+                </button>
+
+                <button id="reliabilityNextPage"
+                        ${currentReliabilityPage === totalPages ? 'disabled' : ''}
+                        style="
+                            padding:8px 14px;
+                            border-radius:6px;
+                            border:1px solid #2563eb;
+                            background:#2563eb;
+                            color:#fff;
+                            cursor:pointer;
+                            font-size:15px;
+                        ">
+                    Next
+                </button>
+            </div>
+        </div>
+    `;
+
+    reliabilityListContainer.innerHTML = html;
+
+    // Pagination button handlers
+    const prevBtn = document.getElementById('reliabilityPrevPage');
+    const nextBtn = document.getElementById('reliabilityNextPage');
+
+    if (prevBtn) {
+        prevBtn.addEventListener('click', () => {
+            if (currentReliabilityPage > 1) {
+                currentReliabilityPage--;
+                renderReliabilityPage();
+            }
+        });
+    }
+
+    if (nextBtn) {
+        nextBtn.addEventListener('click', () => {
+            if (currentReliabilityPage < totalPages) {
+                currentReliabilityPage++;
+                renderReliabilityPage();
+            }
+        });
+    }
+}
+
 // --- CROWD MODAL ---
+
+// how many buses per page
+const CROWD_PAGE_SIZE = 5;
+let currentCrowdPage = 1;
+
 if (crowdBox) crowdBox.addEventListener('click', openCrowdModal);
 if (crowdCloseBtn) crowdCloseBtn.addEventListener('click', () => crowdModalOverlay.style.display = 'none');
 window.addEventListener('click', (e) => { if (e.target === crowdModalOverlay) crowdModalOverlay.style.display = 'none'; });
 
 function openCrowdModal() {
     if (!crowdListContainer) return;
+
+    // sort once when opening
     fleetCrowdData.sort((a, b) => b.percentage - a.percentage); // High % = Comfortable (Empty)
-    crowdListContainer.innerHTML = '';
-
-    if (fleetCrowdData.length === 0) {
-        crowdListContainer.innerHTML = '<div style="text-align:center; padding:20px; color:#999;">No bus data available.</div>';
-    } else {
-        fleetCrowdData.forEach(bus => {
-            const pct = Math.round(bus.percentage);
-            // 100% = Empty (Green), 0% = Full (Red)
-            let colorStr = pct >= 80 ? '#10b981' : (pct >= 50 ? '#f59e0b' : '#ef4444');
-            if (bus.votes === 0) colorStr = '#9ca3af';
-            const percentageText = bus.votes === 0 ? 'No Data' : `${pct}%`;
-
-            crowdListContainer.innerHTML += `
-                <div style="display:flex; justify-content:space-between; align-items:center; padding: 12px 10px; border-bottom: 1px solid #f3f4f6;">
-                    <div style="display:flex; align-items:center; gap:12px;">
-                        <span style="background:#e0e7ff; color:#3730a3; padding:6px 12px; border-radius:6px; font-weight:700; font-size:14px;">${bus.busNumber}</span>
-                        <span style="font-size:12px; color:#6b7280;">(${bus.votes} votes)</span>
-                    </div>
-                    <div style="font-weight:700; color:${colorStr}; font-size:16px;">${percentageText}</div>
-                </div>`;
-        });
-    }
+    currentCrowdPage = 1;   // start from first page
+    renderCrowdPage();
     crowdModalOverlay.style.display = 'flex';
 }
+
+function renderCrowdPage() {
+    if (!crowdListContainer) return;
+
+    const totalItems = fleetCrowdData.length;
+    const totalPages = Math.max(1, Math.ceil(totalItems / CROWD_PAGE_SIZE));
+
+    // safety
+    if (currentCrowdPage > totalPages) currentCrowdPage = totalPages;
+
+    // if no data
+    if (totalItems === 0) {
+        crowdListContainer.innerHTML =
+            '<div style="text-align:center; padding:20px; color:#999;">No bus data available.</div>';
+        return;
+    }
+
+    const startIndex = (currentCrowdPage - 1) * CROWD_PAGE_SIZE;
+    const pageItems = fleetCrowdData.slice(startIndex, startIndex + CROWD_PAGE_SIZE);
+
+    let html = '';
+
+    pageItems.forEach(bus => {
+        const pct = Math.round(bus.percentage);
+        // 100% = Empty (Green), 0% = Full (Red)
+        let colorStr = pct >= 80 ? '#08cd8bff' : (pct >= 50 ? '#f59e0b' : '#ef4444');
+        if (bus.votes === 0) colorStr = '#86898eff';
+        const percentageText = bus.votes === 0 ? 'No Data' : `${pct}%`;
+
+        html += `
+            <div style="display:flex; justify-content:space-between; align-items:center; padding: 12px 10px; border-bottom: 1px solid #f3f4f6;">
+                <div style="display:flex; align-items:center; gap:12px;">
+                    <span style="background:#e0e7ff; color:#3730a3; padding:6px 12px; border-radius:6px; font-weight:700; font-size:14px;">${bus.busNumber}</span>
+                    <span style="font-size:12px; color:#6b7280;">(${bus.votes} votes)</span>
+                </div>
+                <div style="font-weight:700; color:${colorStr}; font-size:16px;">${percentageText}</div>
+            </div>`;
+    });
+
+    // pagination footer
+    html += `
+        <div class="crowd-pagination"
+             style="display:flex; justify-content:space-between; align-items:center; padding:10px 12px; margin-top:8px; font-size:13px; color:#6b7280;">
+            <span>Showing page ${currentCrowdPage} of ${totalPages}</span>
+            <div style="display:flex; gap:8px;">
+                <button id="crowdPrevPage"
+                        ${currentCrowdPage === 1 ? 'disabled' : ''}
+                        style="padding:6px 10px; border-radius:6px; border:1px solid #919294ff; background:#fff; cursor:pointer; font-size:12px;">
+                    Previous
+                </button>
+                <button id="crowdNextPage"
+                        ${currentCrowdPage === totalPages ? 'disabled' : ''}
+                        style="padding:6px 10px; border-radius:6px; border:1px solid #1e62f6ff; background:#2563eb; color:#fff; cursor:pointer; font-size:12px;">
+                    Next
+                </button>
+            </div>
+        </div>
+    `;
+
+    crowdListContainer.innerHTML = html;
+
+    // attach events to pager buttons
+    const prevBtn = document.getElementById('crowdPrevPage');
+    const nextBtn = document.getElementById('crowdNextPage');
+
+    if (prevBtn) {
+        prevBtn.addEventListener('click', () => {
+            if (currentCrowdPage > 1) {
+                currentCrowdPage--;
+                renderCrowdPage();
+            }
+        });
+    }
+
+    if (nextBtn) {
+        nextBtn.addEventListener('click', () => {
+            if (currentCrowdPage < totalPages) {
+                currentCrowdPage++;
+                renderCrowdPage();
+            }
+        });
+    }
+}
+
 
 // --- OTHER LISTENERS ---
 function startComplaintsListener() {

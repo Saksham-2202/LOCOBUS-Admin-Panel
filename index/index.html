@@ -5,26 +5,66 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Bus Sathi Admin | Dashboard</title>
   <link rel="stylesheet" href="style.css" />
+  
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+
+
 </head>
 <body>
   <div class="layout">
     <aside class="sidebar">
       <div class="brand">
         <span>LOCO BUS</span>
-      <div id="busLogoAnim" class="bus-logo"></div>
+        <div id="busLogoAnim" class="bus-logo"></div>
       </div>  
       <nav class="menu">
-        <a class="menu-item active" href="../index/index.html">Dashboard</a>
-        <a class="menu-item" href="../live-map/live-map.html">Live Map</a>
-        <a class="menu-item" href="../fleet/fleet.html">Fleet Management</a>
-        <a class="menu-item" href="../broadCasts/broadCasts.html">Broadcasts</a>
-        <a class="menu-item" href="../notifications/notifications.html">Notifications</a>
-        <a class="menu-item" href="../index/createBus.html">Account Panel</a>
-        <a class="menu-item" href="../help desk/helpDesk.html">Help Desk</a>
-        <a class="menu-item" href="../live-map/addroute.html">Route Importer</a>
-        <a class="menu-item" href="../settings/settings.html">Settings</a>
-     
-      </nav>
+
+    <a class="menu-item active" href="../index/index.html">
+        <span class="menu-icon"><i class="fa-solid fa-gauge"></i></span>
+        <span class="menu-text">Dashboard</span>
+    </a>
+
+    <a class="menu-item" href="../live-map/live-map.html">
+        <span class="menu-icon"><i class="fa-solid fa-map-location-dot"></i></span>
+        <span class="menu-text">Live Map</span>
+    </a>
+
+    <a class="menu-item" href="../fleet/fleet.html">
+        <span class="menu-icon"><i class="fa-solid fa-bus"></i></span>
+        <span class="menu-text">Fleet Management</span>
+    </a>
+
+    <a class="menu-item" href="../broadCasts/broadCasts.html">
+        <span class="menu-icon"><i class="fa-solid fa-bullhorn"></i></span>
+        <span class="menu-text">Broadcasts</span>
+    </a>
+
+    <a class="menu-item" href="../notifications/notifications.html">
+        <span class="menu-icon"><i class="fa-solid fa-bell"></i></span>
+        <span class="menu-text">Notifications</span>
+    </a>
+
+    <a class="menu-item" href="../index/createBus.html">
+        <span class="menu-icon"><i class="fa-solid fa-user-gear"></i></span>
+        <span class="menu-text">Account Panel</span>
+    </a>
+
+    <a class="menu-item" href="../help desk/helpDesk.html">
+        <span class="menu-icon"><i class="fa-solid fa-circle-info"></i></span>
+        <span class="menu-text">Help Desk</span>
+    </a>
+
+    <a class="menu-item" href="../live-map/addroute.html">
+        <span class="menu-icon"><i class="fa-solid fa-file-import"></i></span>
+        <span class="menu-text">Route Importer</span>
+    </a>
+
+    <a class="menu-item" href="../settings/settings.html">
+        <span class="menu-icon"><i class="fa-solid fa-gear"></i></span>
+        <span class="menu-text">Settings</span>
+    </a>
+
+</nav>
 
       <div class="admin-profile">
         <img src="admin img.png" class="admin-icon" alt="Admin" />
@@ -33,14 +73,19 @@
     </aside>
 
     <main class="main">
-
       <header class="topbar">
-        <h2>Dashboard</h2>
-        <a class="menu-item logout-btn" href="#" id="logoutBtn">Logout</a>
+        <h2>Dashboard Overview</h2>
+        <a class="menu-item logout-btn" href="#" id="logoutBtn">
+          <span>🚪</span>
+          Logout
+        </a>
       </header>
 
+      <!-- ✅ NEW: All stat boxes are now clickable with proper links -->
       <section class="stats-row">
-        <div class="stat-box">
+        
+        <!-- Active Fleet - Links to Fleet Management -->
+        <a href="../fleet/fleet.html" class="stat-box stat-link">
           <h3>Active Fleet</h3>
           <p class="value">
             <span id="activeBusCount">--</span>
@@ -51,54 +96,85 @@
           <div class="update-indicator" id="fleetUpdateIndicator">
             <span class="pulse"></span> Live
           </div>
-        </div>
+          <div class="click-hint">View Fleet →</div>
+        </a>
 
-        <div class="stat-box clickable" id="reliabilityBox">
+        <!-- Fleet Reliability - Opens Modal -->
+        <div class="stat-box stat-link" id="reliabilityBox">
           <h3>Fleet Reliability</h3>
           <p class="value"><span id="avgReliability">--</span>%</p>
           <p class="label">Avg On-Time Rate</p>
-          <div class="click-hint">View Details ➝</div>
+          <div class="click-hint">View Details →</div>
         </div>
 
-        <div class="stat-box highlight">
+        <!-- New Complaints - Links to Help Desk -->
+        <a href="../help desk/helpDesk.html" class="stat-box stat-link">
           <h3>New Complaints</h3>
           <p class="value"><span id="complaintsCount">--</span></p>
           <p class="label">Unresolved Complaints</p>
-        </div>
+          <div class="click-hint">View Complaints →</div>
+        </a>
 
-        <div class="stat-box clickable" id="crowdBox">
+        <!-- Passenger Comfort - Opens Modal -->
+        <div class="stat-box stat-link" id="crowdBox">
           <h3>Passenger Comfort</h3>
           <p class="value"><span id="avgComfort">--</span>%</p>
           <p class="label">Avg Not Crowded</p>
-          <div class="click-hint">View Details ➝</div>
+          <div class="click-hint">View Details →</div>
         </div>
       </section>
 
       <section class="panel-row">
+        
+        <!-- Pending Approvals Panel -->
         <div class="panel">
           <div class="panel-header">
             <h3>Pending Approvals</h3>
-            <button>Check All</button>
+            <a href="../index/createBus.html" class="panel-link-btn">
+              <span>👁️</span>
+              Check All
+            </a>
           </div>
           <div class="list" id="pendingList">
-            <div class="list empty">Loading requests...</div>
+            <div class="list empty">
+              <span class="empty-icon">📋</span>
+              Loading requests...
+            </div>
           </div>
         </div>
 
-        <div class="panel">
+        <!-- ✅ ENHANCED: Critical Alerts Panel with More Detail -->
+        <div class="panel panel-critical">
           <div class="panel-header">
-            <h3>Critical Alerts</h3>
-            <button>Check All</button>
+            <h3>
+              <span class="alert-icon">⚠️</span>
+              Critical Alerts
+            </h3>
+            <a href="../fleet/fleet.html" class="panel-link-btn danger">
+              <span>🚨</span>
+              Check All
+            </a>
           </div>
+          
+          <!-- Alert Stats Row -->
+          
+
           <div class="list" id="criticalAlertsList">
-            <div class="list empty">Loading alerts...</div>
+            <div class="list empty">
+              <span class="empty-icon">✅</span>
+              Loading alerts...
+            </div>
           </div>
         </div>
       </section>
 
+      <!-- Recent Notifications Panel -->
       <aside class="card recent-card">
         <div class="recent-header">
-          <h3>Recent Notifications</h3>
+          <div>
+            <h3>Recent Notifications</h3>
+            <p class="card-subtitle">Latest system notifications</p>
+          </div>
           <div class="filter-tabs">
             <button class="filter-tab active" data-filter="all">All</button>
             <button class="filter-tab" data-filter="conductors">Conductors</button>
@@ -106,12 +182,21 @@
           </div>
         </div>
         <div id="recentList" class="recent-list">
-          <div style="padding:20px; text-align:center; color:#999;">Loading notifications...</div>
+          <div class="list empty">
+            <span class="empty-icon">🔔</span>
+            Loading notifications...
+          </div>
+        </div>
+        <div class="card-footer">
+          <a href="../notifications/notifications.html" class="view-all-link">
+            View All Notifications →
+          </a>
         </div>
       </aside>
     </main>
   </div>
 
+  <!-- Notification Details Modal -->
   <div id="notifModalOverlay" class="notif-overlay" aria-hidden="true">
     <div class="notif-modal" role="dialog" aria-labelledby="notifTitle">
       <header class="nm-header">
@@ -119,8 +204,14 @@
         <button id="notifClose" class="nm-close" aria-label="Close">✕</button>
       </header>
       <div class="nm-body">
-        <div class="nm-row"><div class="nm-label">Title</div><div id="nmTitle" class="nm-value"></div></div>
-        <div class="nm-row"><div class="nm-label">Message</div><div id="nmMessage" class="nm-value"></div></div>
+        <div class="nm-row">
+          <div class="nm-label">Title</div>
+          <div id="nmTitle" class="nm-value"></div>
+        </div>
+        <div class="nm-row">
+          <div class="nm-label">Message</div>
+          <div id="nmMessage" class="nm-value"></div>
+        </div>
         <div class="nm-flex">
           <div class="nm-col">
             <div class="nm-label">Target Audience</div>
@@ -131,47 +222,68 @@
             <div id="nmStatus" class="nm-value"></div>
           </div>
         </div>
-        <div class="nm-row"><div class="nm-label">Sent Date & Time</div><div id="nmDate" class="nm-value"></div></div>
-        <div class="nm-row"><div class="nm-label">Expires At</div><div id="nmExpiry" class="nm-value"></div></div>
+        <div class="nm-row">
+          <div class="nm-label">Sent Date & Time</div>
+          <div id="nmDate" class="nm-value"></div>
+        </div>
+        <div class="nm-row">
+          <div class="nm-label">Expires At</div>
+          <div id="nmExpiry" class="nm-value"></div>
+        </div>
       </div>
     </div>
   </div>
 
+  <!-- Fleet Reliability Modal -->
   <div id="reliabilityModalOverlay" class="notif-overlay" aria-hidden="true">
     <div class="notif-modal" role="dialog">
       <header class="nm-header">
-        <h3>Bus On-Time Performance</h3>
+        <h3>
+          <span>📊</span>
+          Bus On-Time Performance
+        </h3>
         <button id="reliabilityClose" class="nm-close">✕</button>
       </header>
       <div class="nm-body">
-        <div class="list-header" style="display:flex; justify-content:space-between; padding-bottom:10px; border-bottom:1px solid #eee; margin-bottom:10px; font-weight:bold; color:#666;">
-            <span>Bus Number</span>
-            <span>Reliability Score</span>
+        <div class="list-header">
+          <span>Bus Number</span>
+          <span>Reliability Score</span>
         </div>
-        <div id="reliabilityListContainer" style="max-height: 300px; overflow-y: auto;">
-            <div style="text-align:center; color:#999;">Loading...</div>
+        <div id="reliabilityListContainer" class="modal-list-container">
+          <div class="modal-loading">
+            <span class="loading-spinner">⏳</span>
+            Loading...
+          </div>
         </div>
       </div>
     </div>
   </div>
 
+  <!-- Crowd Levels Modal -->
   <div id="crowdModalOverlay" class="notif-overlay" aria-hidden="true">
     <div class="notif-modal" role="dialog">
       <header class="nm-header">
-        <h3>Bus Crowd Levels</h3>
+        <h3>
+          <span>👥</span>
+          Bus Crowd Levels
+        </h3>
         <button id="crowdClose" class="nm-close">✕</button>
       </header>
       <div class="nm-body">
-        <div class="list-header" style="display:flex; justify-content:space-between; padding-bottom:10px; border-bottom:1px solid #eee; margin-bottom:10px; font-weight:bold; color:#666;">
-            <span>Bus Number</span>
-            <span>Comfort Score</span>
+        <div class="list-header">
+          <span>Bus Number</span>
+          <span>Comfort Score</span>
         </div>
-        <div id="crowdListContainer" style="max-height: 300px; overflow-y: auto;">
-            <div style="text-align:center; color:#999;">Loading...</div>
+        <div id="crowdListContainer" class="modal-list-container">
+          <div class="modal-loading">
+            <span class="loading-spinner">⏳</span>
+            Loading...
+          </div>
         </div>
       </div>
     </div>
   </div>
+
   <script src="https://cdnjs.cloudflare.com/ajax/libs/bodymovin/5.12.2/lottie.min.js"></script>
   <script type="module" src="script.js"></script>
 </body>
