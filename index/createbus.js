@@ -1,7 +1,7 @@
 // createbus.js - Bulk Bus Management System with Persistence
 
-import { initializeApp } from "https://www.gstatic.com/firebasejs/9.23.0/firebase-app.js";
-import { getAuth, createUserWithEmailAndPassword } from "https://www.gstatic.com/firebasejs/9.23.0/firebase-auth.js";
+import { initializeApp, getApp, deleteApp } from "https://www.gstatic.com/firebasejs/9.23.0/firebase-app.js";
+import { getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword } from "https://www.gstatic.com/firebasejs/9.23.0/firebase-auth.js";
 import { getFirestore, doc, setDoc, getDoc, collection, getDocs } from "https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore.js";
 
 // Firebase Configuration
@@ -15,7 +15,7 @@ const firebaseConfig = {
   appId: "1:296482389648:web:1827bd92dc55c8a857e215"
 };
 
-// Initialize Firebase
+// Initialize Main Firebase App (For Admin)
 const app = initializeApp(firebaseConfig);
 const auth = getAuth(app);
 const db = getFirestore(app);
@@ -49,8 +49,9 @@ function checkAuth() {
   
   try {
     adminProfile = JSON.parse(profile);
-    if (adminNameEl && adminProfile.adminId) {
-      adminNameEl.textContent = adminProfile.adminId.toUpperCase();
+    if (adminNameEl && adminProfile.uid) {
+      // Just display a generic Admin label or fetch name if available
+      adminNameEl.textContent = "ADMIN"; 
     }
     return adminProfile;
   } catch (err) {
@@ -79,8 +80,6 @@ async function loadExistingBuses() {
       const busData = docSnap.data();
       rowCounter++;
       
-      console.log('Loading bus:', busData.busId, 'Password:', busData.busPassword); // Debug log
-      
       const row = {
         id: rowCounter,
         busId: busData.busId || docSnap.id,
@@ -101,8 +100,6 @@ async function loadExistingBuses() {
       const dateB = b.createdAt ? new Date(b.createdAt) : new Date(0);
       return dateB - dateA;
     });
-    
-    console.log('Loaded buses:', busRows); // Debug log
     
     renderTable();
     updateStats();
@@ -176,7 +173,7 @@ window.closeAdminModal = function() {
   currentPasswordRowId = null;
 };
 
-// Verify admin password
+// --- UPDATED: Verify admin password (Matches login.js logic) ---
 window.verifyAdminPassword = async function() {
   const enteredPassword = adminPasswordInput.value;
   
@@ -184,28 +181,34 @@ window.verifyAdminPassword = async function() {
     modalError.textContent = 'Please enter admin password';
     return;
   }
+
+  const user = auth.currentUser;
   
+  if (!user || !user.email) {
+    modalError.textContent = 'Session lost. Please refresh.';
+    return;
+  }
+  
+  modalError.style.color = 'orange';
+  modalError.textContent = 'Verifying...';
+
   try {
-    // Query admin collection to verify password
-    const adminDoc = await getDoc(doc(db, 'admins', adminProfile.docId));
+    // 1. Re-authenticate using Firebase Auth (Secure check)
+    await signInWithEmailAndPassword(auth, user.email, enteredPassword);
+    
+    // 2. Double check Admin Role (Extra security)
+    const adminDoc = await getDoc(doc(db, 'admins', user.uid));
     
     if (!adminDoc.exists()) {
-      modalError.textContent = 'Admin account not found';
-      return;
+       modalError.style.color = 'red';
+       modalError.textContent = 'Admin account verification failed.';
+       return;
     }
     
-    const adminData = adminDoc.data();
-    if (adminData.password !== enteredPassword) {
-      modalError.textContent = 'Incorrect admin password';
-      return;
-    }
-    
-    // Password correct - show the bus password
+    // 3. Success - Show the bus password
     const row = busRows.find(r => r.id === currentPasswordRowId);
     if (row) {
       row.isPasswordVisible = true;
-      // If it's a saved bus with actualPassword, display that
-      // If it's a new unsaved bus, display the generated password
       renderTable();
     }
     
@@ -213,7 +216,13 @@ window.verifyAdminPassword = async function() {
     
   } catch (error) {
     console.error('Error verifying admin password:', error);
-    modalError.textContent = 'Verification failed. Please try again.';
+    modalError.style.color = 'red';
+    
+    if (error.code === 'auth/wrong-password') {
+        modalError.textContent = 'Incorrect admin password';
+    } else {
+        modalError.textContent = 'Verification failed. Try again.';
+    }
   }
 };
 
@@ -312,7 +321,7 @@ function updateStats() {
   pendingCount.textContent = pending;
 }
 
-// Save all buses
+// --- UPDATED: Save all buses (Uses Secondary App to prevent Admin Logout) ---
 async function saveAll() {
   const unsavedRows = busRows.filter(r => !r.isSaved);
   
@@ -321,7 +330,6 @@ async function saveAll() {
     return;
   }
   
-  // Validate all rows
   const invalidRows = unsavedRows.filter(r => !r.busId || r.busId.length < 2);
   if (invalidRows.length > 0) {
     alert('Please fill in all Bus IDs before saving!');
@@ -335,12 +343,24 @@ async function saveAll() {
   let errorCount = 0;
   const errors = [];
   
+  // Initialize Secondary App for creating users without logging out admin
+  let secondaryApp;
+  let secondaryAuth;
+  
+  try {
+      secondaryApp = initializeApp(firebaseConfig, "SecondaryApp");
+      secondaryAuth = getAuth(secondaryApp);
+  } catch (err) {
+      // If app already exists, retrieve it
+      secondaryApp = getApp("SecondaryApp");
+      secondaryAuth = getAuth(secondaryApp);
+  }
+
   for (const row of unsavedRows) {
     try {
       const busId = row.busId;
       const password = row.password;
       
-      // Check if bus already exists
       const busRef = doc(db, 'buses', busId);
       const busSnap = await getDoc(busRef);
       
@@ -350,31 +370,26 @@ async function saveAll() {
         continue;
       }
       
-      // Generate email
       const email = `${busId.toLowerCase()}@locobus.com`;
       
-      // Create Firebase Auth account
-      const userCredential = await createUserWithEmailAndPassword(auth, email, password);
+      // Create User on Secondary Auth (Keeps main Admin logged in)
+      const userCredential = await createUserWithEmailAndPassword(secondaryAuth, email, password);
       const conductorUid = userCredential.user.uid;
       
-      // Sign out immediately
-      await auth.signOut();
-      
-      // Create Firestore document
+      // Create Firestore document (Using main db is fine)
       await setDoc(busRef, {
         busId: busId,
         loginEmail: email,
         conductorUid: conductorUid,
-        busPassword: password, // Store password in Firestore so we can view it later
+        busPassword: password,
         isProfileComplete: false,
         createdAt: new Date().toISOString(),
-        createdBy: adminProfile.adminId || 'Admin'
+        createdBy: adminProfile.uid || 'Admin'
       });
       
-      // Mark as saved and store actual password for viewing
       row.isSaved = true;
-      row.actualPassword = password; // Keep the actual password for viewing
-      row.password = '********'; // Replace display with placeholder
+      row.actualPassword = password;
+      row.password = '********';
       row.isPasswordVisible = false;
       successCount++;
       
@@ -385,7 +400,12 @@ async function saveAll() {
     }
   }
   
-  // Show results
+  // Clean up secondary app
+  if (secondaryAuth) {
+      await secondaryAuth.signOut();
+  }
+  // Note: We don't deleteApp immediately to avoid async issues, but we signed out.
+
   let message = `✅ Successfully created ${successCount} bus(es)`;
   if (errorCount > 0) {
     message += `\n❌ Failed: ${errorCount} bus(es)\n\n${errors.join('\n')}`;
@@ -420,10 +440,10 @@ adminPasswordInput.addEventListener('keypress', (e) => {
 // Initialize
 document.addEventListener('DOMContentLoaded', async () => {
   if (checkAuth()) {
-    // Load existing buses first
     await loadExistingBuses();
   }
 });
+
 // Lottie bus logo animation
 document.addEventListener('DOMContentLoaded', () => {
   const logoContainer = document.getElementById('busLogoAnim');
@@ -433,7 +453,7 @@ document.addEventListener('DOMContentLoaded', () => {
       renderer: 'svg',
       loop: true,
       autoplay: true,
-      path: '../index/Bus_carga_trackMile.json'  // <-- put your real path here
+      path: '../index/Bus_carga_trackMile.json' 
     });
   }
 });
