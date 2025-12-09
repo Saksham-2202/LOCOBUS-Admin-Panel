@@ -30,13 +30,20 @@
         ADMIN_33
       </div>
     </aside>
-
+    
     <main class="main">
       <header class="topbar">
         <h2>Fleet Manager</h2>
         <input class="search" placeholder="Search bus number or driver" />
       </header>
-
+      <div class="filter-bar">
+  <label for="statusFilter"><strong>Filter:</strong></label>
+  <select id="statusFilter" class="status-filter">
+      <option value="all">All Buses</option>
+      <option value="active">Active Only</option>
+      <option value="inactive">Inactive Only</option>
+  </select>
+</div>
       <section class="content">
         <div class="table-wrap">
           <div class="table-header">
@@ -55,7 +62,6 @@
             Rows per page 8 &nbsp; &nbsp; (Auto-loaded from Firebase)
           </div>
         </div>
-
         
       </section>
 

@@ -15,11 +15,13 @@
 
 <body>
 <div class="layout">
-    <aside class="sidebar">
-      <div class="brand">
-        <span>LOCO BUS</span>
+  <!-- Sidebar -->
+  <aside class="sidebar">
+    <div class="brand">
+      <span>LOCO BUS</span>
       <div id="busLogoAnim" class="bus-logo"></div>
-      </div> 
+    </div> 
+    
     <nav class="menu">
       <a class="menu-item" href="../index/index.html">Dashboard</a>
       <a class="menu-item active" href="../live-map/live-map.html">Live Map</a>
@@ -32,20 +34,64 @@
       <a class="menu-item" href="../settings/settings.html">Settings</a>
     </nav>
 
-    <div class="bus-list" id="list"></div>
-
-    <!-- ADMIN BOX AT BOTTOM -->
     <div class="admin-profile">
       <img src="admin img.png" class="admin-icon" />
-      ADMIN2
+      <span>ADMIN2</span>
     </div>
   </aside>
 
-  <!-- MAP -->
-  <div id="map"></div>
+  <!-- Main Content Area -->
+  <div class="main-content">
+    
+    <!-- Top Route Bar -->
+    <div class="route-bar">
+      <div class="route-bar-header">
+        <h3 class="route-bar-title">
+          <span class="route-icon">🗺️</span>
+          Active Routes
+        </h3>
+        
+        <!-- Search Input -->
+        <div class="search-container">
+          <input 
+            type="text" 
+            id="routeSearch" 
+            class="route-search" 
+            placeholder="Search routes by name or number..." 
+          />
+          <span class="search-icon">🔍</span>
+        </div>
+      </div>
 
+      <!-- Route Cards Container (Horizontal Scroll) -->
+      <div class="route-cards-wrapper">
+        <button class="nav-btn nav-prev" id="navPrev" disabled>
+          <span>←</span>
+        </button>
+        
+        <div class="route-cards-container" id="routeCardsContainer">
+          <!-- Route cards will be dynamically inserted here -->
+          <div class="route-card-loading">
+            <span class="loading-spinner">⏳</span>
+            Loading routes...
+          </div>
+        </div>
+        
+        <button class="nav-btn nav-next" id="navNext">
+          <span>→</span>
+        </button>
+      </div>
+
+      <!-- Pagination Info -->
+      <div class="pagination-info">
+        <span id="paginationText">No routes loaded</span>
+      </div>
+    </div>
+
+    <!-- Map Container -->
+    <div id="map"></div>
+  </div>
 </div>
-
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/bodymovin/5.12.2/lottie.min.js"></script>
 <script type="module" src="live-map.js"></script>
