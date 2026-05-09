@@ -49,20 +49,22 @@ let fleetReliabilityData = [];
 let fleetCrowdData = [];
 
 // Auth & Logout
-function checkAuth() {
-  const adminProfile = sessionStorage.getItem('adminProfile');
-  if (!adminProfile) { window.location.href = "../login/login.html"; return null; }
-  try {
-    const profile = JSON.parse(adminProfile);
-    if (adminNameEl && profile.adminId) adminNameEl.textContent = profile.adminId.toUpperCase();
-    return profile;
-  } catch (err) { window.location.href = "../login/login.html"; return null; }
-}
-if (logoutBtn) {
-  logoutBtn.addEventListener('click', (e) => {
-    e.preventDefault(); sessionStorage.removeItem('adminProfile'); window.location.href = "../login/login.html";
-  });
-}
+// function checkAuth() {
+//   const adminProfile = sessionStorage.getItem('adminProfile');
+//   if (!adminProfile) { window.location.href = "../login/login.html"; return null; }
+//   try {
+//     const profile = JSON.parse(adminProfile);
+//     if (adminNameEl && profile.adminId) adminNameEl.textContent = profile.adminId.toUpperCase();
+//     return profile;
+//     } catch (err) { window.location.href = "../login/login.html"; return null; 
+
+//     }
+// }
+// if (logoutBtn) {
+//   logoutBtn.addEventListener('click', (e) => {
+//     //e.preventDefault(); sessionStorage.removeItem('adminProfile'); window.location.href = "../login/login.html";
+//   });
+// }
 
 // --- BUS STATUS, RELIABILITY & CROWD LISTENER ---
 function startBusStatusListener() {
