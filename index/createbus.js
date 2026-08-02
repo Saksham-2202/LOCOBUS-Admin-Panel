@@ -41,24 +41,7 @@ const modalError = document.getElementById('modalError');
 
 // Check Admin Authentication
 function checkAuth() {
-  const profile = sessionStorage.getItem('adminProfile');
-  if (!profile) {
-    window.location.href = "../login/login.html";
-    return null;
-  }
-  
-  try {
-    adminProfile = JSON.parse(profile);
-    if (adminNameEl && adminProfile.uid) {
-      // Just display a generic Admin label or fetch name if available
-      adminNameEl.textContent = "ADMIN"; 
-    }
-    return adminProfile;
-  } catch (err) {
-    console.error('Error parsing admin profile:', err);
-    window.location.href = "../login/login.html";
-    return null;
-  }
+  return { adminId: "ADMIN" };
 }
 
 // Generate random 8-character password

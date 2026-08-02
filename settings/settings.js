@@ -23,12 +23,12 @@ document.addEventListener('DOMContentLoaded', () => {
   console.log("Settings page loaded");
 
   // --- Session Check ---
-  const session = sessionStorage.getItem('adminProfile');
-  if (!session) {
-    console.error("No admin session found.");
-    window.location.href = "../login/login.html"; 
-    return;
-  }
+  // const session = sessionStorage.getItem('adminProfile');
+  // if (!session) {
+  //   console.error("No admin session found.");
+  //   window.location.href = "../login/login.html"; 
+  //   return;
+  // }
   
   const adminProfile = JSON.parse(session);
   console.log("Current Admin ID:", adminProfile.adminId);
